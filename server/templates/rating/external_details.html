@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {{ rating.name }}
+{% endblock %}
+
+{% block content %}
+    <div class="rating-details">
+        <h1>{{ rating.name }}</h1>
+
+        {% if rating.description %}
+            <p class="d-print-none">{{ rating.description|urlize_target_blank }}</p>
+        {% endif %}
+
+        {% if rating_results %}
+            {% if is_last %}
+                <p class="d-print-none">
+                    <a href="{% url 'rating_tournaments' rating.slug %}">
+                        {% trans 'What tournaments were included in the rating?' %}
+                    </a>
+                </p>
+            {% endif %}
+        {% endif %}
+            {% include 'rating/_external_results_table.html' %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{{ rating.description }}">
+    <meta property="og:description" content="{{ rating.description }}">
+{% endblock %}

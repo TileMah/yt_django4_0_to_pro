@@ -1,0 +1,252 @@
+{% load static i18n %}
+
+<!doctype html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% spaceless %}{% block title %}{% endblock %}{% endspaceless %}</title>
+
+    <meta property="og:url" content="{{ SCHEME }}://{{ request.get_host }}{{ request.get_full_path }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image:width" content="200" />
+    <meta property="og:image:height" content="200" />
+    <meta property="og:image" content="{{ SCHEME }}://{{ request.get_host }}{% static 'img/main.jpeg' %}" />
+
+    {% block meta_tags %}
+    {% endblock %}
+
+    <link rel="icon" type="image/png" href="{% static 'favicon.ico' %}">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+
+    {% block additional_css %}
+    {% endblock %}
+</head>
+<body class="d-flex flex-column h-100">
+<script>
+    const theme = localStorage.getItem('theme') || 'auto';
+    document.documentElement.setAttribute('data-bs-theme', theme);
+</script>
+
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top d-print-none">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'home' %}">{% trans "Mahjong portal" %}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar" aria-expanded="false" aria-controls="topNavbar" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="topNavbar">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item dropdown">
+                    <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button" aria-expanded="false" data-bs-toggle="dropdown" data-bs-display="static" aria-label="Toggle theme (auto)">
+                        <span class="ms-2">{% trans 'Theme' %}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+                                {% trans 'Light' %}
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
+                                {% trans 'Dark' %}
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="auto" aria-pressed="true">
+                                {% trans 'Auto' %}
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {% trans 'Ratings' %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="{% url 'rating_list' %}">{% trans 'Ratings' %}</a>
+                        <a class="dropdown-item" href="{% url 'about' %}">{% trans 'About' %}</a>
+                        <a class="dropdown-item" href="{% url 'rating_faq' %}">FAQ</a>
+                        <a class="dropdown-item" href="{% url 'wrc_qualification_2020' %}">{% trans 'WRC 2020' %}</a>
+                        <a class="dropdown-item" href="{% url 'wrc_qualification_2025' %}">{% trans 'WRC 2025' %}</a>
+                    </div>
+                </li>
+                <li class="nav-item {% if page == 'tournament' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'tournament_list' CURRENT_YEAR|default:2020 %}">{% trans 'Tournaments' %}</a>
+                </li>
+                {#            <li class="nav-item dropdown">#}
+                {#                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">#}
+                {#                    EMA#}
+                {#                </a>#}
+                {#                <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">#}
+                {#                    <a class="dropdown-item" href="{% url 'rating' 'ema' %}">{% trans 'Rating' %}</a>#}
+                {#                    <a class="dropdown-item" href="{% url 'tournament_ema_list' 'ema' CURRENT_YEAR|default:2020 %}">{% trans 'Tournaments' %}</a>#}
+                {#                    <a class="dropdown-item" href="{% url 'best_countries' %}">{% trans 'EMA Countries Ranking' %}</a>#}
+                {#                    <a class="dropdown-item" href="{% url 'ema_quotas' %}">{% trans 'EMA Quotas' %}</a>#}
+                {#                </div>#}
+                {#            </li>#}
+                <li class="nav-item {% if page == 'club' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'club_list' %}">{% trans 'Clubs' %}</a>
+                </li>
+                <li class="nav-item {% if page == 'titles' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'titles_list' %}">{% trans 'Titles' %}</a>
+                </li>
+{#                <li class="nav-item {% if page == 'wiki' %}active{% endif %}">#}
+{#                    <a class="nav-link" href="{% url 'wiki_home' %}">{% trans 'Wiki' %}</a>#}
+{#                </li>#}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {% trans 'Online' %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="{% url 'get_current_tenhou_games' %}">{% trans 'Current tenhou.net games' %}</a>
+                        <a class="dropdown-item" href="{% url 'tenhou_accounts' %}">{% trans 'Tenhou accounts' %}</a>
+                        <a class="dropdown-item" href="{% url 'ms_accounts' %}">{% trans 'Mahjong Soul accounts' %}</a>
+                        <a class="dropdown-item" href="{% url 'tenhou_games_history' %}">{% trans 'Tenhou.net games history' %}</a>
+                        <a class="dropdown-item" href="{% url 'latest_yakumans' %}">{% trans 'Yakumans from tenhou.net' %}</a>
+                    </div>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {% trans 'Other' %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="{% url 'contacts' %}">{% trans 'Contacts' %}</a>
+                        <a class="dropdown-item" href="{% url 'tournament_application' %}">{% trans 'Tournament application' %}</a>
+                        <a class="dropdown-item" href="{% url 'championships' %}">{% trans 'Championships' %}</a>
+                        <a class="dropdown-item" href="{% url 'league_details' 'yoroshiku-league-2' %}">{% trans 'Yoroshiku League 2' %}</a>
+                    </div>
+                </li>
+            </ul>
+            <div class="languageChange">
+                <form action="{% url 'set_language' %}" method="post">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ redirect_to }}" />
+
+                    <div class="form-group">
+                        <select name="language" class="form-control form-control-sm" id="languageChangeInputTop">
+                            {% get_current_language as LANGUAGE_CODE %}
+                            {% get_available_languages as LANGUAGES %}
+                            {% get_language_info_list for LANGUAGES as languages %}
+                            {% for language in languages %}
+                                <option value="{{ language.code }}"{% if language.code == LANGUAGE_CODE %} selected{% endif %}>
+                                    {{ language.name_local }} ({{ language.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            {% if user.is_authenticated %}
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="accountsDropdownButton" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="accountsDropdownButton">
+                            {% if user.is_superuser %}
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">{% trans 'Django admin' %}</a>
+                                <a class="dropdown-item" href="{% url 'new_tournaments' %}">{% trans 'New tournaments' %}</a>
+                                <a class="dropdown-item" href="{% url 'transliterate_text' %}">Transliterate</a>
+                                <div class="dropdown-divider"></div>
+                            {% endif %}
+                            <a class="dropdown-item" href="{% url 'account_settings' %}">{% trans 'User settings' %}</a>
+                            {% if user.attached_player %}
+                                <a class="dropdown-item" href="{% url 'player_details' user.attached_player.slug %}">{% trans 'My profile' %}</a>
+                            {% endif %}
+                            {% if user.is_tournament_manager %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'managed_tournaments' %}">{% trans 'My tournaments' %}</a>
+                            {% endif %}
+                            {% if user.is_ema_players_manager %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'list_of_ema_players' %}">{% trans 'EMA players' %}</a>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{% url 'logout' %}">{% trans 'Logout' %}</a>
+                        </ul>
+                    </li>
+                </ul>
+            {% else %}
+		<p></p>
+		<a class="btn btn-outline-primary" href="{% url 'do_login' %}?next={{ request.get_full_path }}">{% trans 'Login' context 'action' %}</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<main role="main">
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+</main>
+
+<footer class="d-print-none footer mt-auto py-3">
+    <div class="container">
+        <div class="row">
+            <div class="col languageChange">
+                <form action="{% url 'set_language' %}" method="post">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ redirect_to }}" />
+
+                    <div class="form-group">
+                        <select name="language" class="form-control form-control-sm" id="languageChangeInputBottom">
+                            {% get_current_language as LANGUAGE_CODE %}
+                            {% get_available_languages as LANGUAGES %}
+                            {% get_language_info_list for LANGUAGES as languages %}
+                            {% for language in languages %}
+                                <option value="{{ language.code }}"{% if language.code == LANGUAGE_CODE %} selected{% endif %}>
+                                    {{ language.name_local }} ({{ language.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="col text-end">
+                <form class="form-inline" action="{% url 'search' %}">
+                    <div class="row">
+                        <div class="col-lg-10 col-sm-6">
+                            <input class="form-control me-sm-2" type="text" name="q" placeholder="{% trans 'Search' %}" aria-label="{% trans 'Search' %}" {% if search_query %}value="{{ search_query }}"{% endif %} required="required">
+                        </div>
+                        <div class="col-lg-2 col-sm-6">
+                            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">{% trans 'Search' %}</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="version-block text-start">
+                    <a href="https://github.com/MahjongRepository/mahjong-portal" target="_blank" style="top: -2px;">
+                        {% trans 'source code' %}
+                    </a>
+                </div>
+                <div class="version-block text-start">
+                    <a href="{% url 'server' %}" style="top: -2px;">
+                        {% trans 'about server' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+<script>
+    $(document).ready(function () {
+        if(window.location.hash) {
+            $('html, body').animate({ scrollTop: $(window.location.hash).offset().top - 60}, 50);
+        }
+    });
+</script>
+{% block additional_js %}
+{% endblock %}
+</body>
+</html>

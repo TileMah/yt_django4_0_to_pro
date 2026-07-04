@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load i18n russian_words_morph %}
+
+{% block title %}
+    {{ city.name }}
+{% endblock %}
+
+{% block content %}
+    <div>
+        {% if clubs %}
+            <h1>{% trans 'Clubs' %}</h1>
+            <div class="table-responsive-sm">
+            <table class="table table-hover mt-4">
+                <thead>
+                <tr>
+                    <th scope="col">{% trans 'Name' %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for club in clubs %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'club_details' club.slug %}">
+                                {{ club.name }}
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if tournaments %}
+            <h1>{% trans 'Tournaments' %} {% if tournaments|length > 1 %}({{ tournaments|length }}){% endif %}</h1>
+            {% include 'tournament/_tournaments_table.html' %}
+        {% endif %}
+
+        {% if players %}
+            <h1>{% trans 'Players' context 'list of players' %} {% if players|length > 1 %}({{ players|length }}){% endif %}</h1>
+
+            <div class="table-responsive-sm">
+                <table class="table table-hover mt-4">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">{% trans 'Name' %}</th>
+                        <th scope="col">{% trans 'Dan' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for player in players %}
+                        <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>
+                                {% include 'common/_player_name.html' %}
+                            </td>
+                            <td><nobr>{{ player.rank_display|default_if_none:'-' }}</nobr></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{% trans 'Riichi mahjong players and tournaments from ' %} {{ city.name|genitive|title }}">
+    <meta property="og:description" content="{% trans 'Riichi mahjong players and tournaments from ' %} {{ city.name|genitive|title }}">
+{% endblock %}

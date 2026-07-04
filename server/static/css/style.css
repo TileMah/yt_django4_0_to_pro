@@ -1,0 +1,107 @@
+main > .container {
+    padding: 80px 15px 0;
+}
+
+a {
+    text-decoration: none;
+}
+
+@media print {
+    body {
+        margin-top: 0;
+    }
+
+    .rating-details a {
+        color: #212529;
+        cursor: text;
+        text-decoration: none;
+    }
+}
+
+.languageChange select {
+    width: 150px;
+    margin-right: 20px;
+}
+
+.version-block {
+    margin-right: 20px;
+    margin-top: 5px;
+}
+
+.filters a {
+    text-decoration: none;
+    margin-right: 10px;
+}
+
+.tournament-registration .form {
+    margin-bottom: 20px;
+    max-width: 380px;
+}
+
+.settings-table tr:first-child td {
+    border-top: none;
+}
+
+.settings-table {
+    margin-bottom: 0;
+}
+
+.settings-table td {
+    vertical-align: middle;
+}
+
+.edit-tournament-form {
+    max-width: 700px;
+}
+
+.not-colored-link {
+    color: #212529;
+}
+
+.not-colored-link:hover {
+    color: #212529;
+    text-decoration: none;
+}
+
+.tooltip-link {
+    cursor: help;
+}
+
+.ratingCalculationCollapse {
+    border-bottom: 1px dashed;
+}
+
+.ratingCalculationCollapse:hover {
+    text-decoration: none;
+}
+
+.mw-600 {
+    max-width: 600px;
+}
+
+.bg-championship {
+    color: #fff;
+    background-color: #72A0C1;
+}
+
+.verified-player-badge {
+    width: 20px;
+    height: 20px;
+    fill: #28a745;
+}
+
+:root {
+  --borderWidth: 6px;
+  --height: 18px;
+  --width: 12px;
+  --borderColor: #78b13f;
+}
+
+.check {
+  display: inline-block;
+  transform: rotate(45deg);
+  height: var(--height);
+  width: var(--width);
+  border-bottom: var(--borderWidth) solid var(--borderColor);
+  border-right: var(--borderWidth) solid var(--borderColor);
+}

@@ -1,0 +1,130 @@
+{% load i18n %}
+
+<div class="table-responsive-sm">
+    <table class="table table-hover mt-4">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">{% trans 'Name' %}</th>
+            <th scope="col">{% trans 'Date' %}</th>
+            <th scope="col">
+                {% if tournament_type %}
+                    {% trans 'Country' %}
+                {% else %}
+                    {% trans 'City' %}
+                {% endif %}
+            </th>
+            <th scope="col">{% trans 'Type' %}</th>
+
+            {% if is_upcoming %}
+                <th scope="col">{% trans 'Registration status' %}</th>
+            {% endif %}
+
+            {% if is_upcoming %}
+                <th scope="col">{% trans 'Participants' context 'number of players' %}</th>
+                {% if not is_event %}
+                    <th scope="col">{% trans 'Max. players' %}</th>
+                {% endif %}
+            {% else %}
+                <th scope="col">{% trans 'Players' context 'number of players' %}</th>
+            {% endif %}
+
+            {% if not is_event %}
+                <th scope="col">{% trans 'Sessions' %}</th>
+            {% endif %}
+            {% if coefficients %}
+                <th scope="col">{% trans 'Power' %}</th>
+                <th scope="col">{% trans 'Coefficient' %}</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for league in leagues %}
+            <th scope="row">-</th>
+            <td><a href="{% url 'league_details' league.slug %}">{{ league.name|truncatewords:4 }}</a></td>
+            <td>
+                <nobr>{{ league.end_date|date:SHORT_DATE_FORMAT }}</nobr>
+            </td>
+            <td>
+                {% trans 'Russia' %}
+            </td>
+            <td>
+            <span class="badge bg-warning text-dark">
+                ONLINE
+            </span>
+            </td>
+            <td>
+                {{ league.players.count|default:'-' }}
+            </td>
+            <td>
+            -
+            </td>
+            <td>
+                {{ league.games }}
+            </td>
+        {% endfor %}
+
+        {% for tournament in tournaments %}
+
+            {% if page == "home" %}
+                <tr {% if tournament.get_tournament_registrations.count >= 72 %}class="table-warning" {% endif %}>
+            {% else %}
+                <tr {% if tournament.id in top_tournament_ids %}class="table-success" {% endif %}>
+            {% endif %}
+
+                {% if reverse_counter %}
+                    <th scope="row">{{ forloop.revcounter }}</th>
+                {% else %}
+                    <th scope="row">{{ forloop.counter }}</th>
+                {% endif %}
+                <td><a href="{{ tournament.get_url }}">{{ tournament.name|truncatewords:4 }}</a></td>
+                <td>
+                    {% if tournament.is_upcoming %}
+                        <nobr>{{ tournament.start_date|date:SHORT_DATE_FORMAT }}</nobr>
+                    {% else %}
+                        <nobr>{{ tournament.end_date|date:SHORT_DATE_FORMAT }}</nobr>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if tournament_type %}
+                        {# let's display country, bot city for ema page #}
+                        {{ tournament.country.name }}
+                    {% else %}
+                        {% if tournament.city %}
+                            <a href="{% url 'city_page' tournament.city.slug %}">{{ tournament.city.name }}</a>
+                        {% else %}
+                            {{ tournament.country.name }}
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td>
+                    <nobr>{% include 'tournament/_tournament_type.html' %}</nobr>
+                </td>
+
+                {% if is_upcoming %}
+                    <td>
+                        <nobr>{% include 'tournament/_tournament_registration_status.html' %}</nobr>
+                    </td>
+                {% endif %}
+
+                {% if is_upcoming %}
+                    <td>
+                        {{ tournament.get_tournament_registrations.count|default:'-' }}
+                    </td>
+                {% endif %}
+
+                {% if not is_event %}
+                    <td>{{ tournament.number_of_players|default:'-' }}</td>
+                    <td>{{ tournament.number_of_sessions|default:'-' }}</td>
+                    {% if coefficients %}
+                        {% with coefficient=coefficients|get_item:tournament.id %}
+                            <td>{{ coefficient.age|floatformat:0 }}%</td>
+                            <td>{{ coefficient.coefficient|floatformat:2 }}</td>
+                        {% endwith %}
+                    {% endif %}
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

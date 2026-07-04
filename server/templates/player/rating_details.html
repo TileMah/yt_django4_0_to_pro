@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load i18n russian_words_morph meta_tags_helper static %}
+
+{% block title %}
+    {{ player.full_name }}. {{ rating.name }}
+{% endblock %}
+
+{% block additional_js %}
+    <script src="{% static 'js/chart.min.js' %}"></script>
+    <script src="{% static 'js/chartjs-adapter-date-fns.bundle.min.js' %}"></script>
+
+    <script>
+        var last_rating_place = {{ last_rating_place }};
+        var ctx = document.getElementById("rating_chart").getContext('2d');
+
+        labels = [];
+        rating_data = [];
+        places_data = [];
+
+        {% for x in filtered_results %}
+            labels.push('{{ x.result.date|date:SHORT_DATE_FORMAT }}');
+            rating_data.push({
+                'x': '{{ x.result.date|date:SHORT_DATE_FORMAT }}',
+                'y': '{{ x.result.score|safe }}',
+            });
+            places_data.push({
+                'x': '{{ x.result.date|date:SHORT_DATE_FORMAT }}',
+                'y': '{{ x.result.place }}',
+            });
+        {% endfor %}
+
+        var font_size = 15;
+        var ratingChart = new Chart(ctx, {
+            responsive: true,
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '{% trans 'Rating' %}',
+                        data: rating_data,
+                        fill: false,
+                        borderColor: 'rgb(153, 102, 255)',
+                        backgroundColor: 'rgb(153, 102, 255)',
+                        yAxisID: 'y-axis-1'
+                    },
+                    {
+                        label: '{% trans 'Place' %}',
+                        data: places_data,
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgb(75, 192, 192)',
+                        yAxisID: 'y-axis-2',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                hoverMode: 'index',
+                stacked: false,
+                scales: {
+                    'y-axis-1': {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            fontSize: font_size,
+                            display: true,
+                            labelString: '{% trans 'Rating' %}'
+                        }
+                    },
+                    'y-axis-2': {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        id: 'y-axis-2',
+                        min: 1,
+                        reverse: true,
+                        beginAtZero: false,
+                        title: {
+                            fontSize: font_size,
+                            display: true,
+                            labelString: '{% trans 'Place' %}'
+                        }
+                    },
+                },
+                legend: {
+                    display: true,
+                    labels: {
+                        fontSize: font_size
+                    }
+                }
+            }
+        });
+
+    </script>
+{% endblock %}
+
+{% block additional_css %}
+    <style>
+        #normalized-toggle, #original-toggle {
+            cursor: pointer;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div>
+        {% include 'player/_player_header.html' %}
+
+        <p><a href="{% url 'player_details' player.slug %}">{% trans 'Player page' %}</a></p>
+
+        <h2>{{ rating.name }}</h2>
+
+        <p class="small mt-0">
+            {% trans 'Rating date' %} {{ today }} ({% trans 'latest changes' %} {{ rating_date }}).
+        </p>
+
+        <p>
+            {{ rating_result.place }} {% trans 'place' %}  ({{ rating_result.score }}).
+        </p>
+
+        <p class="mb-2">
+            <a class="ratingCalculationCollapse" data-bs-toggle="collapse" href="#ratingCalculation{{ rating_result.id }}" aria-expanded="false">
+                {% trans 'how we calculated rating score' %}
+            </a>
+        </p>
+
+        <div class="collapse" id="ratingCalculation{{ rating_result.id }}">
+            <div class="card card-body">
+                {{ rating_result.rating_calculation|linebreaks }}
+            </div>
+        </div>
+
+        <canvas id="rating_chart" class="d-none d-md-block d-print-none"></canvas>
+
+        <h4 class="mt-4">{% trans 'Rating changes' %}</h4>
+
+        <p>
+          <a data-bs-toggle="collapse" href="#ChangesTableCollapse">
+              {% trans 'Show' %}
+          </a>
+        </p>
+        <div class="collapse" id="ChangesTableCollapse">
+            <div class="mb-2">
+                {% if is_last %}
+                    <a href="{% url 'player_rating_changes' player.slug rating.slug %}">
+                        {% trans 'all results' %}
+                    </a>
+                {% else %}
+                    <a href="{% url 'player_rating_changes' player.slug rating.slug rating_date.year rating_date.month rating_date.day %}">
+                        {% trans 'all results' %}
+                    </a>
+                {% endif %}
+            </div>
+            {% with filtered_results|slice:":-11:-1" as results %}
+                {% include 'player/_changes_table.html' %}
+            {% endwith %}
+        </div>
+
+        <h4 class="mt-4">{% trans 'Tournaments' %}</h4>
+        {% with deltas=rating_deltas %}
+            {% include 'player/_deltas_table.html' %}
+        {% endwith %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{{ player.full_name }}. {{ rating.name }}">
+    <meta property="og:description" content="{{ player.full_name }}. {{ rating.name }}">
+{% endblock %}

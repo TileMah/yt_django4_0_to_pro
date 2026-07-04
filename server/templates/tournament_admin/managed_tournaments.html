@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {% trans 'Admin page' %}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active" aria-current="page">{% trans 'Tournaments' %}</li>
+            </ol>
+        </nav>
+
+        <h1>{% trans 'Managed tournaments' %}</h1>
+        {% if tournaments %}
+            <div class="table-responsive-sm">
+                <table class="table table-hover mt-4">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">{% trans 'Name' %}</th>
+                        <th scope="col">{% trans 'Start Date' %}</th>
+                        <th scope="col">{% trans 'End Date' %}</th>
+                        <th scope="col">{% trans 'Participants' context 'Number of players' %}</th>
+                        <th scope="col">{% trans 'Action' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for tournament in tournaments %}
+                        <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{ tournament.name }}</td>
+                            <td>
+                                <nobr>{{ tournament.start_date|date:SHORT_DATE_FORMAT }}</nobr>
+                            </td>
+                            <td>
+                                <nobr>{{ tournament.end_date|date:SHORT_DATE_FORMAT }}</nobr>
+                            </td>
+                            <td>
+                                {% if tournament.is_online %}
+                                    {% if tournament.is_majsoul_tournament %}
+                                        {{ tournament.ms_online_tournament_registrations.all.count }}
+                                    {% else %}
+                                        {{ tournament.online_tournament_registrations.all.count }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ tournament.tournament_registrations.all.count }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'tournament_manage' tournament.id %}" class="btn btn-primary">{% trans 'Manage' %}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>{% trans 'Nothing here' %}</p>
+        {% endif %}
+    </div>
+{% endblock %}

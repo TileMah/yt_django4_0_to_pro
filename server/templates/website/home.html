@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {% trans 'Mahjong portal' %}
+{% endblock %}
+
+{% block content %}
+    <div>
+        {% if upcoming_tournaments %}
+            <h1>{% trans 'Upcoming tournaments' %}</h1>
+            {% with tournaments=upcoming_tournaments is_upcoming=True leagues=leagues %}
+                {% include 'tournament/_tournaments_table.html' %}
+            {% endwith %}
+        {% endif %}
+
+        {% if events %}
+            <h1>{% trans 'Events' %}</h1>
+            {% with tournaments=events is_upcoming=True is_event=True %}
+                {% include 'tournament/_tournaments_table.html' %}
+            {% endwith %}
+        {% endif %}
+
+        <h1>{% trans 'Top 16 players' %}</h1>
+        <p>{{ rating.name }}, <a href="{% url 'rating' rating.slug %}">{% trans 'all results' %}</a></p>
+        {% include 'rating/_results_table.html' %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{% trans 'Website for russian mahjong community. Upcoming tournaments, players ratings and etc.' %}">
+    <meta property="og:description" content="{% trans 'Website for russian mahjong community. Upcoming tournaments, players ratings and etc.' %}">
+{% endblock %}

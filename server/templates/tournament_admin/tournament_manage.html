@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load i18n tz %}
+
+{% block title %}
+    {% trans 'Admin page' %}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'managed_tournaments' %}">{% trans 'Tournaments' %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ tournament.name }}</li>
+            </ol>
+        </nav>
+
+        <h1>{{ tournament.name }}</h1>
+
+        {% if tournament.is_hidden %}
+            <div class="alert alert-warning">
+                <p>
+                    {% trans 'The tournament is excluded from all lists right now, and it is available only by direct link.' %}
+                </p>
+                <p>
+                    {% trans 'It will be published automatically when you will open registration first time.' %}
+                </p>
+            </div>
+        {% endif %}
+
+        <ul class="list-group">
+            <li class="list-group-item list-group-item-light">{% trans 'Settings' %}</li>
+            <li class="list-group-item">
+                <div class="table-responsive-sm">
+                    <table class="table settings-table pb-2">
+                        <tr>
+                            <td><a href="{{ tournament.get_url }}" target="_blank">{% trans 'Tournament public link' %}</a></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                {% trans 'Registered players' %}
+                            </td>
+                            <td>
+                                {% if tournament.is_online %}
+                                    {% if tournament.is_majsoul_tournament %}
+                                        {{ tournament.ms_online_tournament_registrations.count }}
+                                    {% else %}
+                                        {{ tournament.online_tournament_registrations.count }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ tournament.tournament_registrations.count }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if tournament.opened_registration %}
+                            <tr>
+                                <td>{% trans 'Registration opened' %}</td>
+                                <td><a href="{% url 'toggle_registration' tournament.id %}" class="btn btn-danger">{% trans 'Close registration'%}</a></td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td>{% trans 'Registration closed' %}</td>
+                                <td><a href="{% url 'toggle_registration' tournament.id %}" class="btn btn-success">{% trans 'Open registration'%}</a></td>
+                            </tr>
+                        {% endif %}
+                        {% if tournament.registrations_pre_moderation %}
+                            <tr>
+                                <td>{% trans 'Premoderation of participants' %}</td>
+                                <td><a href="{% url 'toggle_premoderation' tournament.id %}" class="btn btn-primary">{% trans 'Switch to postmoderation'%}</a></td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td>{% trans 'Postmoderation of participants' %}</td>
+                                <td><a href="{% url 'toggle_premoderation' tournament.id %}" class="btn btn-primary">{% trans 'Switch to premoderation'%}</a></td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td>{% trans 'Edit tournament information' %}</td>
+                            <td><a href="{% url 'tournament_edit' tournament.id %}" class="btn btn-primary">{% trans 'Edit' %}</a></td>
+                        </tr>
+                        {% if tournament.display_notes %}
+                            {% if tournament.share_notes %}
+                                <tr>
+                                    <td>{% trans 'Notes opened' %}</td>
+                                    <td><a href="{% url 'toggle_share_notes' tournament.id %}" class="btn btn-danger">{% trans 'Hide notes for all'%}</a></td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td>{% trans 'Notes hidden' %}</td>
+                                    <td><a href="{% url 'toggle_share_notes' tournament.id %}" class="btn btn-success">{% trans 'Open notes for all'%}</a></td>
+                                </tr>
+                            {% endif %}
+                        {% endif %}
+                        {% if not tournament.is_hidden %}
+                                <tr>
+                                    <td></td>
+                                    <td><a href="{% url 'toggle_hidden' tournament.id %}" class="btn btn-danger">{% trans 'Hide tournament'%}</a></td>
+                                </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </li>
+        </ul>
+
+        <h2 class="mt-4">{% trans 'Participants' %}</h2>
+        {% if tournament_registrations %}
+            <div class="table-responsive-sm">
+                <table class="table table-hover mt-4">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">{% trans 'Name' %}</th>
+                        <th scope="col">{% trans 'City' %}</th>
+                        <th scope="col">{% trans 'Registered at' %}</th>
+                        {% if not tournament.is_online %}
+                            <th scope="col">{% trans 'Phone' %}</th>
+                        {% endif %}
+                        <th scope="col">{% trans 'Additional contact' %}</th>
+                        {% if tournament.display_notes %}
+                            <th scope="col">{% trans 'Notes' %}</th>
+                            <th scope="col"></th>
+                        {% endif %}
+                        <th scope="col">{% trans 'Approved' %}</th>
+                        <th scope="col">{% trans 'Action' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for registration_item in tournament_registrations %}
+                        <tr {% if registration_item.is_highlighted %}class="table-success" {% endif %}>
+                            <td>{{ forloop.revcounter }}</td>
+                            <td>
+                                <nobr>
+                                    {% if registration_item.player %}
+                                        <a href="{% url 'player_details' registration_item.player.slug %}">
+                                            {{ registration_item.player.full_name }}
+                                        </a>
+                                    {% else %}
+                                        {{ registration_item.full_name }}
+                                    {% endif %}
+                                </nobr>
+                            </td>
+                            <td>
+                                {% if registration_item.player %}
+                                    {{ registration_item.player.city.name }}
+                                {% elif registration_item.city_object %}
+                                    {{ registration_item.city_object.name }}
+                                {% else %}
+                                    {{ registration_item.city }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <nobr>
+                                    {% timezone 'Europe/Moscow' %}
+                                        {{ registration_item.created_on|date:SHORT_DATE_FORMAT }}
+                                        {{ registration_item.created_on|time }}
+                                    {% endtimezone %}
+                                </nobr>
+                            </td>
+                            {% if tournament.is_o %}
+                                <td>
+                                    {{ registration_item.notes }}
+                                </td>
+                            {% endif %}
+                            {% if not tournament.is_online %}
+                                <td>{{ registration_item.phone }}</td>
+                            {% endif %}
+                            <td>
+                                {% if tournament.is_online %}
+                                    {{ registration_item.contact|default:'-' }}
+                                {% else %}
+                                    {{ registration_item.additional_contact|default:'-' }}
+                                {% endif %}
+                            </td>
+                            {% if tournament.display_notes %}
+                                <td>
+                                    {{ registration_item.notes }}
+                                </td>
+                                <td>
+                                    <a href="{% url 'notes_edit' tournament.id registration_item.id %}" class="btn btn-primary">{% trans 'Notes edit' %}</a>
+                                </td>
+                            {% endif %}
+                            <td>
+                                {% if registration_item.is_approved %}
+                                    {% trans 'Yes' %}
+                                {% else %}
+                                    <a href="{% url 'approve_registration' tournament.id registration_item.id %}" class="btn btn-success">
+                                        {% trans 'Approve' %}
+                                    </a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'remove_registration' tournament.id registration_item.id %}" class="btn btn-danger">
+                                    {% trans 'Delete' %}
+                                </a>
+
+                                <a href="{% url 'toggle_highlight' tournament.id registration_item.id %}" class="btn btn-primary" style="margin-top: 5px">
+                                    {% trans 'Color' %}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>{% trans 'There is no registrations yet.' %}</p>
+        {% endif %}
+    </div>
+{% endblock %}

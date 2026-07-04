@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load i18n humanize meta_tags_helper %}
+
+{% block title %}
+    {{ tournament.name }}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <h1>{{ tournament.name }}</h1>
+
+        {% include 'tournament/_tournament_top_header.html' %}
+
+        <p>
+            <a href="{% url 'tournament_announcement' tournament.slug %}">{% trans 'Tournament announcement link' %}</a>
+        </p>
+
+        {% if tournament.old_pantheon_id %}
+            <p>
+                <a href="https://archive.riichimahjong.org/eid{{ tournament.old_pantheon_id }}/stat.html" target="_blank">{% trans 'Detailed tournament statistics' %}</a>
+            </p>
+        {% endif %}
+
+        {% if tournament.new_pantheon_id %}
+            {% get_current_language as LANGUAGE_CODE %}
+
+            <p>
+                <a href="https://rating.riichimahjong.org/event/{{ tournament.new_pantheon_id }}/order/rating" target="_blank">{% trans 'Detailed tournament statistics' %}</a>
+            </p>
+        {% endif %}
+
+        {% include 'tournament/_tournament_header.html' %}
+
+        {% if tournament.results_description %}
+            <p>{{ tournament.results_description|linebreaksbr|urlize }}</p>
+        {% endif %}
+
+        {% if has_multiple_countries %}
+            {% for country in countries %}
+                <span class="badge bg-info">
+                {{ country.name }} ({{ country.count }})
+                </span>
+            {% endfor %}
+        {% endif%}
+
+        {% include 'tournament/_tournament_results.html' %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{% tournament_page_description tournament %}">
+    <meta property="og:description" content="{% tournament_page_description tournament %}">
+{% endblock %}

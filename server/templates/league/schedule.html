@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load tz %}
+{% load i18n %}
+
+{% block title %}
+    {{ league.name }}. {% trans 'Schedule' %}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <h1>{{ league.name }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'league_details' league.slug %}">{% trans 'League' %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% trans 'Schedule' %}</li>
+            </ol>
+        </nav>
+        {% for session in sessions %}
+            <h3>{% trans "Session " %} #{{ session.number }}</h3>
+            {% timezone 'Europe/Moscow' %}
+                <p class="mb-1">{% trans 'Starting' %} {{ session.start_time|date:'d M. H-i' }} (МСК).</p>
+            {% endtimezone %}
+            {% with games=session.all_games is_upcoming_games=True %}
+                {% include 'league/_schedule_games_table.html' %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load tz %}
+{% load i18n %}
+
+{% block title %}
+    {{ league.name }}
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{{ league.name }}. {{ league.description }}">
+    <meta property="og:description" content="{{ league.name }}. {{ league.description }}" />
+{% endblock %}
+
+{% block content %}
+    <div>
+        <h1 class="mb-3">{{ league.name }}</h1>
+        <p>{{ league.description|linebreaksbr|urlize }}</p>
+
+        <ul>
+            <li>
+                <a href="{% url 'league_teams' league.slug %}">{% trans 'Teams' %}</a>
+            </li>
+            <li>
+                <a href="{% url 'league_schedule' league.slug %}">{% trans 'Schedule' %}</a>
+            </li>
+        </ul>
+
+        {% if not user.is_authenticated %}
+            <p>
+                <a href="{% url 'do_login' %}?next={% url 'league_details' league.slug %}" class="btn btn-primary">{% trans 'Login through Pantheon' %}</a>
+            </p>
+        {% endif %}
+
+        {% for upcoming_session in upcoming_sessions %}
+            <h3>{% trans "Session " %} #{{ upcoming_session.number }}</h3>
+
+            {% timezone 'Europe/Moscow' %}
+                <p class="mb-1">{% trans 'Starting' %} {{ upcoming_session.start_time|date:'d M. H-i' }} (МСК).</p>
+            {% endtimezone %}
+
+            {% if upcoming_session.my_team_games %}
+                <h3>{% trans 'My team games' %}</h3>
+
+                {% with games=upcoming_session.my_team_games user_team_id=user_team_id show_assigned_players_for_all=upcoming_session.show_assigned_players_for_all %}
+                    {% include 'league/_schedule_games_table.html' %}
+                {% endwith %}
+
+                <h3>{% trans 'Games' context "many games" %}</h3>
+            {% endif %}
+
+            {% with games=upcoming_session.all_games is_upcoming_games=True show_assigned_players_for_all=upcoming_session.show_assigned_players_for_all %}
+                {% include 'league/_schedule_games_table.html' %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+{% endblock %}

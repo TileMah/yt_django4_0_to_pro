@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load i18n humanize player_helper %}
+
+{% block title %}
+    {% trans 'European Riichi Championship 2019 Qualifications' %}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <h2>{% trans 'European Riichi Championship 2019 Qualifications' %}</h2>
+        {% if LANGUAGE_CODE == 'ru' %}
+            <p>
+                21-23 июня 2019 года в Нидерландах пройдёт Чемпионат Европы - 5th European Riichi Mahjong Championship
+                2019 (<a href="https://www.ermc2019.com" target="_blank">https://www.ermc2019.com</a>)
+            </p>
+            <p>
+                Участники от России будут отбираться по российскому риичи-рейтингу RR. Всем игрокам в топе рейтинга на 1
+                января 2019 года (в соответствии с количеством выделенных для России мест) будет предложено участие в
+                ЧЕ. Если кто-то откажется от участия в ЧЕ, возможность поехать на турнир получит следующий по
+                зафиксированному на 1 января рейтингу игрок.
+            </p>
+            <p>
+                В Чемпионате Европы смогут принять участие только те игроки, которые в 2019 году будут являться
+                действующими членами Федерации маджонга, поэтому игрокам, которые планируют принять участие в Чемпионате
+                Европы, нужно вступить в Федерацию маджонга и оплатить членский взнос за 2019 год.
+            </p>
+            <p>
+                Информация о вступлении в Федерацию и оплате взноса: <a href="https://mahjong.click/ru/contacts/">https://mahjong.click/ru/contacts/</a>
+            </p>
+            <p>
+                Если вы уже являетесь членом Федерации маджонга, не забудьте оплатить взнос за 2019 год.
+            </p>
+            <p>
+                Рейтинг RR на 1 января 2019 года приведен ниже.
+            </p>
+            <p>
+                Игроки в топе таблицы выделены цветами согласно их текущему статусу.
+            </p>
+            <p>
+                <span style="background-color: {{ 'green'|ermc_color }}; padding: 5px;">Зеленый</span> - точно едет.
+            </p>
+            <p>
+                <span style="background-color: {{ 'yellow'|ermc_color }}; padding: 5px;">Желтый</span> - скорее всего едет.
+            </p>
+            <p>
+                <span style="background-color: {{ 'orange'|ermc_color }}; padding: 5px;">Оранжевый</span> - пока сомневается, но скорее всего не едет.
+            </p>
+            <p>
+                <span style="background-color: {{ 'blue'|ermc_color }}; padding: 5px;">Голубой</span> - игрок пока ничего не ответил.
+            </p>
+            <p>
+                <span style="background-color: {{ 'pink'|ermc_color }}; padding: 5px;">Розовый</span> - игрок пока что не проходит, но готов ехать, если появится квота.
+            </p>
+            <p>
+                <span style="background-color: {{ 'gray'|ermc_color }}; padding: 5px;">Серый</span> - точно не едет.
+            </p>
+            <p>
+                <span style="background-color: {{ 'dark_green'|ermc_color }}; padding: 5px;">Непонятный темный сине-зеленый цвет</span> - отдельная квота для Михаила Луговкина, Чемпиона Европы 2016.
+            </p>
+            <p>
+                <span style="background-color: {{ 'violet'|ermc_color }}; padding: 5px;">Фиолетовый</span> - игрок замены, готовый ехать если представится случай.
+            </p>
+            <p>
+                <span style="background-color: {{ 'dark_blue'|ermc_color }}; padding: 5px;">Тёмно-синий</span> - сертифицированный судья.
+            </p>
+            <p>
+                На 13 января у России 25 квот. <a href="http://mahjong-europe.org/ranking/quotas_RCR.html" target="_blank">http://mahjong-europe.org/ranking/quotas_RCR.html</a>
+            </p>
+        {% else %}
+            <p>{% trans 'List of players sorted by RR rating (on 1st January 2019)' %}</p>
+        {% endif %}
+
+        {% include 'website/_qualification_table.html' %}
+
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{% trans 'List of players sorted by RR rating (on 1st January 2019)' %}">
+    <meta property="og:description" content="{% trans 'List of players sorted by RR rating (on 1st January 2019)' %}">
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load i18n humanize russian_words_morph meta_tags_helper tz %}
+
+{% block title %}
+    {{ club.name }}
+{% endblock %}
+
+{% block content %}
+    <div>
+        <h1>{{ club.name }}</h1>
+        {% if club.website %}
+            <p><a href="{{ club.website }}" target="_blank">{{ club.website }}</a></p>
+        {% endif %}
+
+        <p>
+            {% if club.city %}
+                <a href="{% url 'city_page' club.city.slug %}">{{ club.city.name }}</a>,
+            {% endif %}
+            {{ club.country }}
+        </p>
+
+        {% if club.description %}
+            <p>{{ club.description|linebreaksbr|urlize }}</p>
+        {% endif %}
+
+        {% if tournaments %}
+            <h2>{% trans 'Latest 5 tournaments' %}</h2>
+            <a href="{% url 'club_tournaments' club.slug %}">{% trans 'all tournaments' %}</a>
+            {% include 'tournament/_tournaments_table.html' %}
+        {% endif %}
+
+        {% if club_rating %}
+            <h3 id="stat">{% trans 'Club statistics' %}</h3>
+            <p>{% trans 'We are displaying here players with 10+ club games from the last 360 days.' %}</p>
+            <p> {% trans 'Sorting:' %}
+                <select id="sortingSelect" class="form-control d-inline" style="width: 300px; ">
+                    {% for key, value in sorting.items %}
+                        <option value="{{ key }}" {% if sort == key %}selected="selected"{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </p>
+            <div class="table-responsive">
+                <table class="table mt-2 table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">{% trans 'Name' %}</th>
+                            <th scope="col">
+                                {% trans 'Tenhou' %}
+                            </th>
+                            <th scope="col">
+                                {% trans 'Games' %}
+                            </th>
+                            <th scope="col">
+                                <nobr>{% trans 'Avg. place' %}</nobr>
+                            </th>
+                            <th scope="col">
+                                {% trans '1st' %}
+                            </th>
+                            <th scope="col">
+                                {% trans '2nd' %}
+                            </th>
+                            <th scope="col">
+                                {% trans '3rd' %}
+                            </th>
+                            <th scope="col">
+                                {% trans '4th' %}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in club_rating %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {% if item.player %}
+                                        {% with item.player as player %}
+                                            {% include 'common/_player_name.html' %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <nobr>{{ item.player_string }}</nobr>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <nobr>{{ item.get_rank_display|default:'' }}</nobr>
+                                </td>
+                                <td>
+                                    {{ item.games_count }}
+                                </td>
+                                <td>
+                                    {{ item.average_place|floatformat:2 }}
+                                </td>
+                                <td>
+                                    {{ item.first_place|floatformat:2 }}
+                                </td>
+                                <td>
+                                    {{ item.second_place|floatformat:2 }}
+                                </td>
+                                <td>
+                                    {{ item.third_place|floatformat:2 }}
+                                </td>
+                                <td>
+                                    {{ item.fourth_place|floatformat:2 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if club.current_club_rating_pantheon_id %}
+            <h2>{% trans 'Club games' %}</h2>
+            <p>
+                {% trans 'Current rating games:' %} <a href="{{ club.get_link_to_club_rating }}" target="_blank">{{ club.get_link_to_club_rating }}</a>
+            </p>
+            {% if club.pantheon_ids %}
+                <p class="mb-0">{% trans 'Previous club rating events:' %}</p>
+                <ul class="mt-0">
+                    {% for event_link in club.get_links_to_previous_games %}
+                        <li><a href="{{ event_link }}" target="_blank">{{ event_link }}</a></li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endif %}
+
+        {% if club_sessions %}
+            <h3>{% trans 'Latest 10 club games' %}</h3>
+
+            {% timezone club.timezone %}
+                <p>{% trans 'Total games: ' %} {{ total_sessions }}</p>
+                <p>{% trans 'Last updated ' %} {{ club.sync_info.updated_on }}</p>
+            {% endtimezone %}
+
+            {# Desktop table #}
+            <div class="table-responsive d-none d-md-block">
+                <table class="table mt-2 mb-4 table-bordered">
+                    <tbody>
+                    {% for club_session in club_sessions %}
+                        <tr>
+                            <td colspan="8">
+                                {% timezone club.timezone %}
+                                    {% if club_session.pantheon_id and club_session.pantheon_event_id %}
+                                        <a href="https://gui.mjtop.net/eid{{ club_session.pantheon_event_id }}/game/{{ club_session.pantheon_id }}" target="_blank">
+                                            {{ club_session.date }}
+                                        </a>
+                                    {% else %}
+                                        {{ club_session.date }}
+                                    {% endif %}
+                                {% endtimezone %}
+                            </td>
+                        </tr>
+                        <tr>
+                            {% for result in club_session.results.all %}
+                                <td>
+                                    {% with result as item %}
+                                        {% include 'club/_club_game_header.html' %}
+                                    {% endwith %}
+                                </td>
+                                <td>{{ result.score|intcomma }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Mobile table #}
+            <div class="table-responsive d-block d-md-none">
+                <table class="table mt-2 mb-4 table-bordered">
+                    <tbody>
+                    {% for club_session in club_sessions %}
+                        <tr class="table-success">
+                            <td colspan="2">
+                                {% timezone club.timezone %}
+                                    {% if club_session.pantheon_id and club_session.pantheon_event_id %}
+                                        <a href="https://gui.mjtop.net/eid{{ club_session.pantheon_event_id }}/game/{{ club_session.pantheon_id }}" target="_blank">
+                                            {{ club_session.date }}
+                                        </a>
+                                    {% else %}
+                                        {{ club_session.date }}
+                                    {% endif %}
+                                {% endtimezone %}
+                            </td>
+                        </tr>
+                        {% with club_session.results.all as results %}
+                            <tr>
+                                <td>
+                                    {% with results.0 as result %}
+                                        {% include 'club/_club_game_header.html' %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {{ results.0.score|intcomma }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {% with results.1 as result %}
+                                        {% include 'club/_club_game_header.html' %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {{ results.1.score|intcomma }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {% with results.2 as result %}
+                                        {% include 'club/_club_game_header.html' %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {{ results.2.score|intcomma }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {% with results.3 as result %}
+                                        {% include 'club/_club_game_header.html' %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {{ results.3.score|intcomma }}
+                                </td>
+                            </tr>
+                        {% endwith %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="{% club_page_description club %}">
+    <meta property="og:description" content="{% club_page_description club %}" />
+{% endblock %}
+
+{% block additional_js %}
+    <script>
+        $(document).ready(function () {
+            $('#sortingSelect').change(function () {
+                window.location.href = window.location.pathname + '?sort=' + $(this).val() + '#stat';
+            });
+        });
+    </script>
+{% endblock %}

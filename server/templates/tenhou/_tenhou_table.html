@@ -1,0 +1,105 @@
+{% load i18n tenhou_helper humanize %}
+
+{# Desktop table #}
+<div class="table-responsive d-none d-md-block">
+    <table class="table mt-2 mb-4 table-bordered">
+        <thead>
+        <tr>
+            <th scope="col" width="20%">
+                {% trans 'Start' %}
+            </th>
+            <th scope="col" width="20%">
+                東
+            </th>
+            <th scope="col" width="20%">
+                南
+            </th>
+            <th scope="col" width="20%">
+                西
+            </th>
+            <th scope="col" width="20%">
+                北
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for game in games %}
+            <tr>
+                <td style="vertical-align: middle">
+                    {{ game.game_type }} {{ game.start_time|naturaltime }}
+                </td>
+                {% for player in game.players %}
+                    <td>
+                        {% include 'tenhou/_tenhou_player.html' %}
+                    </td>
+                {% endfor %}
+                {% if not game.players.3 %}
+                    <td>-</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Mobile table #}
+<div class="table-responsive d-block d-md-none">
+    <table class="table mt-2 mb-4 table-bordered">
+        <tbody>
+        {% for game in games %}
+            <tr class="table-success">
+                <th scope="col">
+                    {% trans 'Start' %}
+                </th>
+                <td style="align-items : center;">
+                    {{ game.game_type }} {{ game.start_time|naturaltime }}
+                </td>
+            </tr>
+            <tr>
+                <th scope="col">
+                    東
+                </th>
+                <td>
+                    {% with game.players.0 as player %}
+                        {% include 'tenhou/_tenhou_player.html' %}
+                    {% endwith %}
+                </td>
+            </tr>
+            <tr>
+                <th scope="col">
+                    南
+                </th>
+                <td>
+                    {% with game.players.1 as player %}
+                        {% include 'tenhou/_tenhou_player.html' %}
+                    {% endwith %}
+                </td>
+            </tr>
+            <tr>
+                <th scope="col">
+                    西
+                </th>
+                <td>
+                    {% with game.players.2 as player %}
+                        {% include 'tenhou/_tenhou_player.html' %}
+                    {% endwith %}
+                </td>
+            </tr>
+            <tr>
+                <th scope="col">
+                    北
+                </th>
+                <td>
+                    {% if game.players.3 %}
+                        {% with game.players.3 as player %}
+                            {% include 'tenhou/_tenhou_player.html' %}
+                        {% endwith %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
