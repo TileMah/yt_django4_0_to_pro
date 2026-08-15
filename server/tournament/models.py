@@ -270,8 +270,10 @@ class TournamentResult(BaseModel):
         Player, on_delete=models.PROTECT, related_name="tournament_results", null=True, blank=True
     )
     player_string = models.CharField(max_length=512, null=True, blank=True)
+    slug = models.SlugField(unique=True)
     place = models.PositiveSmallIntegerField()
-    scores = models.DecimalField(default=None, decimal_places=2, max_digits=10, null=True, blank=True)
+    scores = models.DecimalField(default=None, decimal_places=0, max_digits=10, null=True, blank=True)
+    ranking = models.DecimalField(default=None, decimal_places=0, max_digits=4, null=True, blank=True)
     exclude_from_rating = models.BooleanField(default=False)
     games = models.PositiveSmallIntegerField(default=0)
 
@@ -488,3 +490,17 @@ class TournamentApplication(BaseModel):
 
     def __unicode__(self):
         return ""
+
+class TournamentRoundResult(BaseModel):
+    tournament = models.ForeignKey(Tournament, related_name="round_results", on_delete=models.CASCADE)
+    round_number = models.PositiveSmallIntegerField(verbose_name="Тур")
+    player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="round_results")
+    score = models.IntegerField(verbose_name="Очки (сырой счёт)")
+    place = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Место в туре")
+
+    class Meta:
+        ordering = ["tournament", "round_number", "-score"]
+        unique_together = ("tournament", "round_number", "player")
+
+    def __str__(self):
+        return "{} — тур {} — {}".format(self.tournament, self.round_number, self.player)

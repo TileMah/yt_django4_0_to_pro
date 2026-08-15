@@ -5,9 +5,22 @@ from django.contrib import admin
 
 from settings.models import City, Country
 
+# Импортируем компоненты стороннего пакета
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 
-class CountryAdmin(admin.ModelAdmin):
-    list_display = ["name"]
+class CountryResource(resources.ModelResource):
+    class Meta:
+        model = Country
+        # Указываем, какие поля импортировать (необязательно, по умолчанию — все)
+        fields = ('name',	'code2',	'code',	'iso') 
+        # Поле, по которому система поймет: обновить существующую запись или создать новую
+        import_id_fields = ('code',)
+
+class CountryAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+    resource_classes = [CountryResource]
+    
+    list_display = ["code2", "code", "name"]
 
 
 class CityForm(forms.ModelForm):

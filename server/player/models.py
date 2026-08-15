@@ -162,3 +162,4 @@ class PlayerQuotaEvent(BaseModel):
             PlayerQuotaEvent.NEW: "#FFFFFF",
         }
         return colors.get(index, "")
+

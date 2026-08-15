@@ -30,14 +30,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOLF_SORTITION_DIR = "shared_golf"
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", None)
+#!SECRET_KEY = os.environ.get("SECRET_KEY", None)
+SECRET_KEY = "mah"
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "").lower() == "true"
+#!DEBUG = os.environ.get("DEBUG", "").lower() == "true"
+DEBUG = "true"
 
 AUTO_BOT_TOKEN = os.environ.get("AUTO_BOT_TOKEN", None)
 EXTERNAL_QUERY_SECRET = os.environ.get("EXTERNAL_QUERY_SECRET", None)
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = ['*']   #['127.0.0.1']
+#!ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 SITE_ID = 1
@@ -76,7 +79,10 @@ INSTALLED_APPS = [
     "online",
     "ema",
     "league",
+    "import_export"
 ]
+# Гарантирует, что скачиваемые файлы будут открываться в Excel без искажения кодировки
+IMPORT_EXPORT_USE_TRANSACTIONS = True
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -113,12 +119,22 @@ WSGI_APPLICATION = "mahjong_portal.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
-db_config_dict = dj_database_url.config()
-db_config_dict["OPTIONS"] = {"pool": False}
-DATABASES = {"default": db_config_dict}
+#!db_config_dict = dj_database_url.config()
+#!db_config_dict["OPTIONS"] = {"pool": False}
+#!DATABASES = {"default": db_config_dict}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mah',
+        'USER': 'mah',
+        'PASSWORD': 'mah',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
-if os.environ.get("PANTHEON_DB_URL"):
-    DATABASES["pantheon"] = dj_database_url.parse(os.environ.get("PANTHEON_DB_URL"))
+#!if os.environ.get("PANTHEON_DB_URL"):
+#!    DATABASES["pantheon"] = dj_database_url.parse(os.environ.get("PANTHEON_DB_URL"))
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
@@ -140,7 +156,8 @@ LANGUAGES = [["en", "English"], ["ru", "Russian"]]
 
 LOCALE_PATHS = [os.path.join(BASE_DIR, "locale")]
 
-TIME_ZONE = "UTC"
+#! "UTC"
+TIME_ZONE =  'Europe/Lisbon'
 
 USE_I18N = True
 

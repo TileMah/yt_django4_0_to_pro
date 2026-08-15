@@ -2,10 +2,31 @@
 
 from django import forms
 from django.contrib import admin
+from django.utils.text import slugify
 
 from player.models import Player, PlayerQuotaEvent, PlayerTitle
+from settings.models import Country
+
 from player.tenhou.models import TenhouNickname
 
+from import_export import resources, fields
+from import_export.admin import ImportExportModelAdmin
+from import_export.widgets import ForeignKeyWidget
+from import_export.formats import base_formats
+from import_export.forms import ImportForm, ConfirmImportForm
+
+
+class PlayerImportForm(ImportForm):
+    only_new = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Импортировать только новых игроков",
+        help_text="Существующие игроки (найденные по slug) будут пропущены, а не обновлены.",
+    )
+
+
+class PlayerConfirmImportForm(ConfirmImportForm):
+    only_new = forms.BooleanField(required=False, widget=forms.HiddenInput)
 
 class PlayerForm(forms.ModelForm):
     class Meta:
@@ -17,20 +38,78 @@ class TenhouNicknameInline(admin.TabularInline):
     model = TenhouNickname
     extra = 1
 
+class PlayerResource(resources.ModelResource):
+        country = fields.Field(
+            column_name='country',  # Имя колонки в вашем CSV/Excel файле
+            attribute='country',    # Имя связи ForeignKey в модели Player
+            widget=ForeignKeyWidget(Country, field='code2') # Ищем страну по полю 'code2'
+        )
+        slug = fields.Field(attribute='slug')
 
-class PlayerAdmin(admin.ModelAdmin):
+        def __init__(self, only_new=False, **kwargs):
+            super().__init__(**kwargs)
+            self.only_new = only_new
+
+        class Meta:
+            model = Player
+            # Поля, которые попадут в файл (можно исключить ненужные, например 'id')
+            slug = slugify("{} {}".format(Player.last_name, Player.first_name))
+            fields = ('slug', 'ema_id', 'first_name', 'last_name', 'country' )
+            # Поле, по которому система поймет: обновить существующую запись или создать новую
+            import_id_fields = ('first_name', 'last_name' ,)
+
+        def before_import_row(self, row, **kwargs):
+            last_name = (row.get('last_name') or '').strip()
+            first_name = (row.get('first_name') or '').strip()
+            row['slug'] = slugify("{} {}".format(first_name, last_name, ))
+
+        def skip_row(self, instance, original, row, import_validation_errors=None):
+            # original.pk есть — значит, игрок с таким slug уже существует в базе
+            if original.pk:
+                return True
+            return super().skip_row(instance, original, row, import_validation_errors)
+
+#@admin.register(Player)
+class PlayerAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+    resource_classes = [PlayerResource]
+     #   list_display = ('ema_id', 'first_name', 'last_name','country')
     form = PlayerForm
     inlines = [TenhouNicknameInline]
 
-    prepopulated_fields = {"slug": ["last_name_en", "first_name_en"]}
+    import_form_class = PlayerImportForm
+    confirm_form_class = PlayerConfirmImportForm
 
-    list_display = ["last_name", "first_name", "city", "pantheon_id"]
+    list_display = ["ema_id", "first_name","last_name", "city", "pantheon_id"]
     list_filter = ["is_hide", "country"]
     search_fields = ["first_name_ru", "first_name_en", "last_name_ru", "last_name_en", "ema_id"]
-
+    
+    def get_import_formats(self):
+        """Переопределяем разделитель для CSV формата на ';'"""
+        formats = super().get_import_formats()
+        for fmt in formats:
+            if isinstance(fmt, base_formats.CSV):
+                # Меняем разделитель. По умолчанию библиотека использует openpyxl/csv-пакет
+                fmt.kwargs = {'delimiter': ';'}  
+        return formats
+    
     def get_queryset(self, request):
         return Player.objects.all()
 
+    # --- переносим значение чекбокса с шага "выбор файла" на шаг "подтверждение" ---
+    def get_confirm_form_initial(self, request, import_form):
+        initial = super().get_confirm_form_initial(request, import_form)
+        if import_form:
+            initial['only_new'] = import_form.cleaned_data.get('only_new', False)
+        return initial
+
+    def get_import_resource_kwargs(self, request, *args, **kwargs):
+        resource_kwargs = super().get_import_resource_kwargs(request, *args, **kwargs)
+        form = kwargs.get('form')
+        only_new = False
+        if form is not None and hasattr(form, 'cleaned_data'):
+            only_new = form.cleaned_data.get('only_new', False)
+        resource_kwargs['only_new'] = only_new
+        return resource_kwargs   
 
 class PlayerTitleForm(forms.ModelForm):
     class Meta:
@@ -56,3 +135,4 @@ class PlayerQuotaEventAdmin(admin.ModelAdmin):
 admin.site.register(Player, PlayerAdmin)
 admin.site.register(PlayerQuotaEvent, PlayerQuotaEventAdmin)
 admin.site.register(PlayerTitle, PlayerTitleAdmin)
+

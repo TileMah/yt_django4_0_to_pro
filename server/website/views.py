@@ -36,15 +36,18 @@ NEW_PANTHEON_TYPE = "new"
 
 
 def home(request):
-    rating = Rating.objects.get(type=Rating.RR)
+    rating = Rating.objects.get(type=Rating.EMA) # Раньше RR
     today, rating_date = get_latest_rating_date(rating)
-    rating_results = (
-        RatingResult.objects.filter(rating=rating)
-        .filter(date=rating_date)
-        .prefetch_related("player")
-        .prefetch_related("player__city")
-        .order_by("place")
-    )[:16]
+    if rating_date:
+        rating_results = (
+            RatingResult.objects.filter(rating=rating)
+            .filter(date=rating_date)
+            .prefetch_related("player")
+            .prefetch_related("player__city")
+            .order_by("place")
+        )[:16]
+    else:
+        rating_results = RatingResult.objects.none()
 
     upcoming_tournaments = (
         Tournament.public.filter(is_upcoming=True)

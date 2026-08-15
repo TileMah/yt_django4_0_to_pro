@@ -52,10 +52,28 @@ def rating_details(request, slug, year=None, month=None, day=None, country_code=
     raise Http404
 
 
-def get_external_rating_details(rating, request, year=None, month=None, day=None, country_code=None, stat_type=None):
+def get_rating_details(request, slug, year=None, month=None, day=None, country_code=None):
+    rating = get_object_or_404(Rating, slug=slug)
+
     today, rating_date, is_last = parse_rating_date(year, month, day)
     if not rating_date:
-        today, rating_date = get_latest_rating_date(rating, is_external=True)
+        today, rating_date = get_latest_rating_date(rating)
+
+    if not rating_date:
+        raise Http404
+
+    is_ema = rating.type == Rating.EMA
+    rating_results = (
+        RatingResult.objects.filter(rating=rating)
+        .prefetch_related("player")
+        .prefetch_related("player__city")
+        .prefetch_related("player__country")
+        .order_by("place")
+    )
+
+    closest_date = RatingResult.objects.filter(rating=rating, date__lte=rating_date).order_by("date")
+    
+
     all_results = True if stat_type is None or stat_type == ExternalRating.EXT_FILTER_ALL_RESULTS else False
     if all_results:
         rating_results = (
@@ -146,6 +164,9 @@ def get_rating_details(request, slug, year=None, month=None, day=None, country_c
     today, rating_date, is_last = parse_rating_date(year, month, day)
     if not rating_date:
         today, rating_date = get_latest_rating_date(rating)
+
+    if not rating_date:
+        raise Http404
 
     is_ema = rating.type == Rating.EMA
     rating_results = (

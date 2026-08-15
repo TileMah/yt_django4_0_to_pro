@@ -14,7 +14,8 @@ def get_latest_rating_date(rating, is_external=False):
         rating_results = ExternalRatingDelta.objects.filter(rating=rating).filter(date__lte=today).order_by("date")
     else:
         rating_results = RatingResult.objects.filter(rating=rating).filter(date__lte=today).order_by("date")
-    return today, rating_results.last().date
+    last_result = rating_results.last()
+    return today, last_result.date if last_result else None
 
 
 def parse_rating_date(year, month, day):
