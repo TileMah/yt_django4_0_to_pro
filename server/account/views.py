@@ -123,12 +123,13 @@ def get_replay_hash(log_link):
 
 @login_required
 @require_POST
-def request_player_and_user_connection(request, slug):
-    player = get_object_or_404(Player, slug=slug)
+def request_player_and_user_connection(request, player_id):
+    player = get_object_or_404(Player, id=player_id)
     contacts = request.POST.get("contacts")
     if not contacts:
-        return redirect("player_details", slug)
-
+        return redirect("player_details", player_id)
+    
     AttachingPlayerRequest.objects.create(user=request.user, player=player, contacts=contacts)
     messages.success(request, _("Request was created."))
-    return redirect("player_details", player.slug)
+    return redirect("player_details", player_id)
+

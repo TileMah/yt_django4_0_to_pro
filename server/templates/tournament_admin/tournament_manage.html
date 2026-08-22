@@ -131,7 +131,7 @@
                             <td>
                                 <nobr>
                                     {% if registration_item.player %}
-                                        <a href="{% url 'player_details' registration_item.player.slug %}">
+                                        <a href="{% url 'player_details' registration_item.player.id %}">
                                             {{ registration_item.player.full_name }}
                                         </a>
                                     {% else %}

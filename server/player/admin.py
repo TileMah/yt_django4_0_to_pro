@@ -39,36 +39,39 @@ class TenhouNicknameInline(admin.TabularInline):
     extra = 1
 
 class PlayerResource(resources.ModelResource):
-        country = fields.Field(
-            column_name='country',  # Имя колонки в вашем CSV/Excel файле
-            attribute='country',    # Имя связи ForeignKey в модели Player
-            widget=ForeignKeyWidget(Country, field='code2') # Ищем страну по полю 'code2'
-        )
-        slug = fields.Field(attribute='slug')
+    country = fields.Field(
+        column_name='country',
+        attribute='country',
+        widget=ForeignKeyWidget(Country, field='code2')
+    )
 
-        def __init__(self, only_new=False, **kwargs):
-            super().__init__(**kwargs)
-            self.only_new = only_new
+    def __init__(self, only_new=False, **kwargs):
+        super().__init__(**kwargs)
+        self.only_new = only_new
 
-        class Meta:
-            model = Player
-            # Поля, которые попадут в файл (можно исключить ненужные, например 'id')
-            slug = slugify("{} {}".format(Player.last_name, Player.first_name))
-            fields = ('slug', 'ema_id', 'first_name', 'last_name', 'country' )
-            # Поле, по которому система поймет: обновить существующую запись или создать новую
-            import_id_fields = ('first_name', 'last_name' ,)
+    class Meta:
+        model = Player
+        fields = ('ema_id', 'first_name', 'last_name', 'country')
+        import_id_fields = ('first_name', 'last_name')
 
-        def before_import_row(self, row, **kwargs):
-            last_name = (row.get('last_name') or '').strip()
-            first_name = (row.get('first_name') or '').strip()
-            row['slug'] = slugify("{} {}".format(first_name, last_name, ))
+    def before_import_row(self, row, **kwargs):
+        row['first_name'] = str(row.get('first_name') or '').strip()
+        row['last_name'] = str(row.get('last_name') or '').strip()
 
-        def skip_row(self, instance, original, row, import_validation_errors=None):
-            # original.pk есть — значит, игрок с таким slug уже существует в базе
-            if original.pk:
-                return True
-            return super().skip_row(instance, original, row, import_validation_errors)
+    def get_or_init_instance(self, instance_loader, row):
+        first_name = row.get('first_name', '')
+        last_name = row.get('last_name', '')
+        try:
+            instance = Player.objects.get(first_name=first_name, last_name=last_name)
+            return instance, False
+        except Player.DoesNotExist:
+            return self.init_instance(row), True
 
+    def skip_row(self, instance, original, row, import_validation_errors=None):
+        if self.only_new and original.pk:
+            return True
+        return super().skip_row(instance, original, row, import_validation_errors)
+    
 #@admin.register(Player)
 class PlayerAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     resource_classes = [PlayerResource]

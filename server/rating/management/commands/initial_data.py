@@ -18,9 +18,8 @@ class Command(BaseCommand):
         country = Country.objects.create(name="Russia", code="RU")
         Rating.objects.create(name="RR", slug="rr", type=Rating.RR)
 
-        first_player = Player.objects.create(first_name="Takaharu", last_name="Ooi", slug="first", country=country)
-
-        second_player = Player.objects.create(first_name="Koshin", last_name="Asakura", slug="second", country=country)
+        first_player = Player.objects.create(first_name="Takaharu", last_name="Ooi", country=country)
+        second_player = Player.objects.create(first_name="Koshin", last_name="Asakura", country=country)
 
         first_tournament = Tournament.objects.create(
             name="First",

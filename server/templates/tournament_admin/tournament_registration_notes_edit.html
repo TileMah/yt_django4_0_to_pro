@@ -16,7 +16,7 @@
         </nav>
 
         {% if registration.player %}
-            <h1><a href="{% url 'player_details' registration.player.slug %}">{{ registration.full_name }}</a></h1>
+            <h1><a href="{% url 'player_details' registration.player.id %}">{{ registration.full_name }}</a></h1>
         {% else %}
             <h1>{{ registration.full_name }}</h1>
         {% endif %}

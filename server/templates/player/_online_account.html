@@ -1,12 +1,12 @@
 {% with tenhou_object=player.tenhou_object ms_object=player.ms_object %}
     {% if tenhou_object %}
-        <a href="{% url 'player_tenhou_details' player.slug %}">
+        <a href="{% url 'player_tenhou_details' player.id %}">
             <nobr>{{ tenhou_object.get_rank_display }}</nobr>
         </a>
     {% endif %}
     {% if ms_object %}
         {% if tenhou_object %}/{% endif %}
-        <a href="{% url 'player_ms_details' player.slug %}">
+        <a href="{% url 'player_ms_details' player.id %}">
             <nobr>{{ ms_object.get_rank_display }}</nobr>
         </a>
     {% endif %}

@@ -19,9 +19,9 @@ urlpatterns = [
     url(r"^logout/$", CustomLogoutView.as_view(), name="logout"),
     url(r"^login/$", do_login, name="do_login"),
     url(r"^settings/$", account_settings, name="account_settings"),
-    path(
-        r"request-verification/<slug:slug>/",
-        request_player_and_user_connection,
-        name="request_player_and_user_connection",
-    ),
+path(
+    r"request-verification/<int:player_id>/",
+    request_player_and_user_connection,
+    name="request_player_and_user_connection",
+),
 ]

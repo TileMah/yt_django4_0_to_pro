@@ -4,6 +4,7 @@ import ujson as json
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator
 
 from club.models import Club
 from mahjong_portal.models import BaseModel
@@ -266,20 +267,16 @@ class Tournament(BaseModel):
 
 class TournamentResult(BaseModel):
     tournament = models.ForeignKey(Tournament, related_name="results", on_delete=models.PROTECT)
-    player = models.ForeignKey(
-        Player, on_delete=models.PROTECT, related_name="tournament_results", null=True, blank=True
-    )
-    player_string = models.CharField(max_length=512, null=True, blank=True)
-    slug = models.SlugField(unique=True)
+    player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="tournament_results")
     place = models.PositiveSmallIntegerField()
     scores = models.DecimalField(default=None, decimal_places=0, max_digits=10, null=True, blank=True)
     ranking = models.DecimalField(default=None, decimal_places=0, max_digits=4, null=True, blank=True)
     exclude_from_rating = models.BooleanField(default=False)
     games = models.PositiveSmallIntegerField(default=0)
 
-    # for players without profile
-    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True)
-
+    class Meta:
+        unique_together = ("tournament", "player")
+    
     def __unicode__(self):
         return self.tournament.name
 
@@ -494,13 +491,17 @@ class TournamentApplication(BaseModel):
 class TournamentRoundResult(BaseModel):
     tournament = models.ForeignKey(Tournament, related_name="round_results", on_delete=models.CASCADE)
     round_number = models.PositiveSmallIntegerField(verbose_name="Тур")
+    table_number = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name="Стол",
+    )
     player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="round_results")
     score = models.IntegerField(verbose_name="Очки (сырой счёт)")
     place = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Место в туре")
 
     class Meta:
-        ordering = ["tournament", "round_number", "-score"]
         unique_together = ("tournament", "round_number", "player")
+        ordering = ["tournament", "round_number", "table_number", "-score"]
 
     def __str__(self):
-        return "{} — тур {} — {}".format(self.tournament, self.round_number, self.player)
+        return "{} — тур {} — стол {} — {}".format(self.tournament, self.round_number, self.table_number, self.player)

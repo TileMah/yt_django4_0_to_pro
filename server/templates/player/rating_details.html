@@ -108,7 +108,7 @@
     <div>
         {% include 'player/_player_header.html' %}
 
-        <p><a href="{% url 'player_details' player.slug %}">{% trans 'Player page' %}</a></p>
+        <p><a href="{% url 'player_details' player.id %}">{% trans 'Player page' %}</a></p>
 
         <h2>{{ rating.name }}</h2>
 
@@ -144,11 +144,11 @@
         <div class="collapse" id="ChangesTableCollapse">
             <div class="mb-2">
                 {% if is_last %}
-                    <a href="{% url 'player_rating_changes' player.slug rating.slug %}">
+                    <a href="{% url 'player_rating_changes' player.id rating.slug %}">
                         {% trans 'all results' %}
                     </a>
                 {% else %}
-                    <a href="{% url 'player_rating_changes' player.slug rating.slug rating_date.year rating_date.month rating_date.day %}">
+                    <a href="{% url 'player_rating_changes' player.id rating.slug rating_date.year rating_date.month rating_date.day %}">
                         {% trans 'all results' %}
                     </a>
                 {% endif %}

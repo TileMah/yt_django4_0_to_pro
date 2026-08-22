@@ -4,7 +4,6 @@ from django import forms
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.utils.text import slugify
 
 from tournament.models import (
     MsOnlineTournamentRegistration,
@@ -22,6 +21,7 @@ from import_export.widgets import ForeignKeyWidget
 from player.models import Player
 from settings.models import Country
 
+
 class TournamentForm(forms.ModelForm):
     class Meta:
         model = Tournament
@@ -32,7 +32,7 @@ class TournamentAdmin(admin.ModelAdmin):
     form = TournamentForm
 
     prepopulated_fields = {"slug": ["name_en"]}
-    list_display = ["name", "country", "end_date", "is_upcoming", "export"]
+    list_display = ["id", "name", "country", "end_date", "is_upcoming", "export"]
     list_filter = ["is_event", "tournament_type", "russian_cup", "country"]
     search_fields = ["name_ru", "name_en"]
 
@@ -111,14 +111,9 @@ class TournamentApplicationAdmin(admin.ModelAdmin):
 
 class TournamentResultResource(resources.ModelResource):
     player = fields.Field(
-        column_name='player',
+        column_name='first_name',
         attribute='player',
-        widget=ForeignKeyWidget(Player, field='slug')
-    )
-    country = fields.Field(
-        column_name='country',
-        attribute='country',
-        widget=ForeignKeyWidget(Country, field='code2')
+        widget=ForeignKeyWidget(Player, field='id')
     )
     tournament = fields.Field(
         column_name='tournament',
@@ -128,34 +123,95 @@ class TournamentResultResource(resources.ModelResource):
 
     class Meta:
         model = TournamentResult
-        fields = ('place', 'country', 'scores', 'ranking', 'player', 'tournament')
+        fields = ('place', 'scores', 'ranking', 'player', 'tournament')
         import_id_fields = ('player', 'tournament')
 
     def before_import_row(self, row, **kwargs):
         first_name = str(row.get('first_name') or '').strip()
         last_name = str(row.get('last_name') or '').strip()
-        row['player'] = slugify("{} {}".format(first_name, last_name))
+
+        player = Player.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).first()
+        if player is None:
+            raise ValueError(
+                "Player not found: '{} {}' (row will not be imported)".format(first_name, last_name)
+            )
+        row['first_name'] = player.id
 
         tournament_raw = row.get('tournament')
         row['tournament'] = int(float(tournament_raw)) if tournament_raw not in (None, '') else 0
 
-    def before_save_instance(self, instance, row, **kwargs):
-        instance.slug = "{}-{}".format(instance.player.slug, instance.tournament_id)
 
 class TournamentResultAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     resource_classes = [TournamentResultResource]
-    list_display = ["tournament", "player", "place", "scores", "country"]
-    prepopulated_fields = {"slug": ["player", "tournament"]}
+    list_display = ["tournament", "player", "place", "scores"]
     search_fields = [
         "tournament__name",
         "player__last_name_ru",
         "player__first_name_ru",
         "player__last_name_en",
         "player__first_name_en",
-        "player",
     ]
     raw_id_fields = ["tournament", "player"]
     list_filter = [["tournament", admin.RelatedOnlyFieldListFilter]]
+
+
+class TournamentRoundResultResource(resources.ModelResource):
+    player = fields.Field(
+        column_name='first_name',
+        attribute='player',
+        widget=ForeignKeyWidget(Player, field='id')
+    )
+    tournament = fields.Field(
+        column_name='tournament',
+        attribute='tournament',
+        widget=ForeignKeyWidget(Tournament, field='id')
+    )
+
+    class Meta:
+        model = TournamentRoundResult
+        fields = ('round_number', 'table_number', 'score', 'place', 'player', 'tournament')
+        import_id_fields = ('player', 'tournament', 'round_number')
+
+    def before_import_row(self, row, **kwargs):
+        first_name = str(row.get('first_name') or '').strip()
+        last_name = str(row.get('last_name') or '').strip()
+
+        player = Player.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).first()
+        if player is None:
+            raise ValueError(
+                "Player not found: '{} {}' (row will not be imported)".format(first_name, last_name)
+            )
+        row['first_name'] = player.id
+
+        tournament_raw = row.get('tournament')
+        row['tournament'] = int(float(tournament_raw)) if tournament_raw not in (None, '') else 0
+
+        round_raw = row.get('round_number')
+        row['round_number'] = int(float(round_raw)) if round_raw not in (None, '') else 0
+
+        table_raw = row.get('table_number')
+        if table_raw in (None, ''):
+            raise ValueError("table_number is required and cannot be empty")
+        table_number = int(float(table_raw))
+        if table_number <= 0:
+            raise ValueError("table_number must be greater than 0, got {}".format(table_number))
+        row['table_number'] = table_number
+
+        score_raw = row.get('score')
+        row['score'] = int(float(score_raw)) if score_raw not in (None, '') else 0
+
+
+class TournamentRoundResultAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+    resource_classes = [TournamentRoundResultResource]
+    list_display = ["tournament", "round_number", "table_number", "player", "score", "place"]
+    list_display_links = ["tournament"]
+    list_editable = ["round_number", "table_number", "player", "score", "place"]
+    list_filter = [["tournament", admin.RelatedOnlyFieldListFilter], "round_number", "table_number"]
+    search_fields = [
+        "player__first_name_ru", "player__first_name_en",
+        "player__last_name_ru", "player__last_name_en",
+    ]
+    ordering = ["tournament", "round_number", "table_number", "-score"]
 
 
 class OnlineTournamentConfigAdmin(admin.ModelAdmin):
@@ -165,19 +221,7 @@ class OnlineTournamentConfigAdmin(admin.ModelAdmin):
         "online_config",
     ]
 
-class TournamentRoundResultAdmin(admin.ModelAdmin):
-    list_display = ["tournament", "round_number", "player", "score", "place"]
-    list_display_links = ["tournament"]
-    list_editable = ["round_number", "player", "score", "place"]
-    list_filter = [["tournament", admin.RelatedOnlyFieldListFilter], "round_number"]
-    search_fields = [
-        "player__first_name_ru", "player__first_name_en",
-        "player__last_name_ru", "player__last_name_en",
-    ]
-    ordering = ["tournament", "round_number", "-score"]
 
-
-admin.site.register(TournamentRoundResult, TournamentRoundResultAdmin)
 admin.site.register(Tournament, TournamentAdmin)
 admin.site.register(OnlineTournamentConfig, OnlineTournamentConfigAdmin)
 admin.site.register(TournamentRegistration, TournamentRegistrationAdmin)
@@ -185,3 +229,4 @@ admin.site.register(OnlineTournamentRegistration, OnlineTournamentRegistrationAd
 admin.site.register(MsOnlineTournamentRegistration, MsOnlineTournamentRegistrationAdmin)
 admin.site.register(TournamentApplication, TournamentApplicationAdmin)
 admin.site.register(TournamentResult, TournamentResultAdmin)
+admin.site.register(TournamentRoundResult, TournamentRoundResultAdmin)

@@ -16,7 +16,7 @@ class Player(BaseModel):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
+    #  slug = models.SlugField(unique=True)
 
     country = models.ForeignKey(Country, on_delete=models.PROTECT, null=True, blank=True)
     city = models.ForeignKey(City, on_delete=models.PROTECT, null=True, blank=True)
@@ -33,6 +33,7 @@ class Player(BaseModel):
 
     class Meta:
         ordering = ["last_name"]
+        unique_together = ("first_name", "last_name")
 
     def __unicode__(self):
         return self.full_name
@@ -40,6 +41,10 @@ class Player(BaseModel):
     def __str__(self):
         return self.__unicode__()
 
+    @property
+    def slug(self):
+        from django.utils.text import slugify
+        return slugify("{} {}".format(self.first_name, self.last_name))
     @property
     def full_name(self):
         if self.is_hide:

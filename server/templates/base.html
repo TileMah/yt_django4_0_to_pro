@@ -153,7 +153,7 @@
                             {% endif %}
                             <a class="dropdown-item" href="{% url 'account_settings' %}">{% trans 'User settings' %}</a>
                             {% if user.attached_player %}
-                                <a class="dropdown-item" href="{% url 'player_details' user.attached_player.slug %}">{% trans 'My profile' %}</a>
+                                <a class="dropdown-item" href="{% url 'player_details' user.attached_player.id %}">{% trans 'My profile' %}</a>
                             {% endif %}
                             {% if user.is_tournament_manager %}
                                 <div class="dropdown-divider"></div>

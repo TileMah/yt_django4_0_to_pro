@@ -88,7 +88,7 @@ class PlayerSitemap(BaseSitemap):
         return Player.objects.all()
 
     def location(self, obj):
-        return reverse("player_details", kwargs={"slug": obj.slug})
+        return reverse("player_details", kwargs={"player_id": obj.id})
 
     def lastmod(self, obj):
         return obj.updated_on

@@ -45,7 +45,7 @@
                     <tr>
                         <th scope="row">{{ forloop.revcounter }}</th>
                         <td>
-                            <a href="{% url 'player_details' player.slug %}">
+                            <a href="{% url 'player_details' player.id %}">
                                 {{ player.full_name }}
                             </a>
                         </td>

@@ -33,11 +33,11 @@
                         <tr>
                             <td width="250px">
                                 {% if rating_date %}
-                                    <a href="{% url 'player_rating_details' player.slug rating_result.rating.slug rating_date.year rating_date.month rating_date.day %}">
+                                    <a href="{% url 'player_rating_details' player.id rating_result.rating.slug rating_date.year rating_date.month rating_date.day %}">
                                         {{ rating_result.rating.name }}
                                     </a>
                                 {% else %}
-                                    <a href="{% url 'player_rating_details' player.slug rating_result.rating.slug %}">
+                                    <a href="{% url 'player_rating_details' player.id rating_result.rating.slug %}">
                                         {{ rating_result.rating.name }}
                                     </a>
                                 {% endif %}
@@ -70,7 +70,7 @@
 
         {% if tournament_results %}
             <h4>{% trans 'Latest tournaments' %}</h4>
-            <p><a href="{% url 'player_tournaments' player.slug %}">{% trans 'all player tournaments' %}</a></p>
+            <p><a href="{% url 'player_tournaments' player.id %}">{% trans 'all player tournaments' %}</a></p>
 
             <div class="table-responsive-sm">
                 <table class="table table-hover">
@@ -128,7 +128,7 @@
 
         {% if tenhou_data %}
             <h4 id="tenhou" class="mt-4">{% trans 'Tenhou.net profile' %}</h4>
-            <p><a href="{% url 'player_tenhou_details' player.slug %}">{% trans 'more information' %}</a></p>
+            <p><a href="{% url 'player_tenhou_details' player.id %}">{% trans 'more information' %}</a></p>
 
             {% for tenhou_item in tenhou_data %}
                 {% with tenhou_item.four_players_aggregated_statistics as aggregated_stat %}
@@ -263,7 +263,7 @@
 
         {% if ms_data %}
             <h4 id="ms" class="mt-4">{% trans 'Mahjong Soul profile' %}</h4>
-            <p><a href="{% url 'player_ms_details' player.slug %}">{% trans 'more information' %}</a></p>
+            <p><a href="{% url 'player_ms_details' player.id %}">{% trans 'more information' %}</a></p>
             <h5>{% trans 'Statistics for' %} {{ ms_data.account_name }}</h5>
 
             {% with ms_data.four_players_statistics as stat %}

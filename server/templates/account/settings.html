@@ -5,7 +5,7 @@
 
     {% if player and tenhou_account %}
         <h4 id="tenhou" class="mt-4">{% trans 'Tenhou.net profile' %} [ {{ tenhou_account.tenhou_username }} ]</h4>
-        <p><a href="{% url 'player_tenhou_details' player.slug %}">{% trans 'more information' %}</a></p>
+        <p><a href="{% url 'player_tenhou_details' player.id %}">{% trans 'more information' %}</a></p>
 
         <div class="col-lg-6">
             <div class="alert alert-warning">

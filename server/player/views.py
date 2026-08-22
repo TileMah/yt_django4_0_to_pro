@@ -17,16 +17,16 @@ from tournament.models import TournamentResult
 
 def player_by_id_details(request, player_id):
     player = get_object_or_404(Player, id=player_id)
-    return redirect(player_details, player.slug)
-
+    return redirect(player_details, player.id)
 
 def player_by_id_tenhou_details(request, player_id):
     player = get_object_or_404(Player, id=player_id)
     return redirect(player_tenhou_details, player.slug)
 
 
-def player_details(request, slug, year=None, month=None, day=None):
-    player = get_object_or_404(Player, slug=slug)
+def player_details(request, player_id, year=None, month=None, day=None):
+  
+    player = get_object_or_404(Player, id=player_id)
 
     _, entered_date, _ = parse_rating_date(year, month, day)
 
@@ -84,8 +84,8 @@ def player_details(request, slug, year=None, month=None, day=None):
     )
 
 
-def player_tournaments(request, slug):
-    player = get_object_or_404(Player, slug=slug)
+def player_tournaments(request, player_id):
+    player = get_object_or_404(Player, id=player_id)
 
     tournament_results = (
         TournamentResult.objects.filter(player=player).prefetch_related("tournament").order_by("-tournament__end_date")
@@ -94,8 +94,8 @@ def player_tournaments(request, slug):
     return render(request, "player/tournaments.html", {"player": player, "tournament_results": tournament_results})
 
 
-def player_rating_details(request, slug, rating_slug, year=None, month=None, day=None):
-    player = get_object_or_404(Player, slug=slug)
+def player_rating_details(request, player_id, rating_slug, year=None, month=None, day=None):
+    player = get_object_or_404(Player, id=player_id)
     rating = get_object_or_404(Rating, slug=rating_slug)
 
     today, rating_date, is_last = parse_rating_date(year, month, day)
@@ -142,8 +142,8 @@ def player_rating_details(request, slug, rating_slug, year=None, month=None, day
     )
 
 
-def player_rating_changes(request, slug, rating_slug, year=None, month=None, day=None):
-    player = get_object_or_404(Player, slug=slug)
+def player_rating_changes(request, player_id, rating_slug, year=None, month=None, day=None):
+    player = get_object_or_404(Player, id=player_id)
     rating = get_object_or_404(Rating, slug=rating_slug)
 
     today, rating_date, is_last = parse_rating_date(year, month, day)
