@@ -32,11 +32,7 @@
                                 </span>
                     {% else %}
                         {% with result.player as player %}
-                            {% if player %}
-                                {% include 'common/_player_name.html' %}
-                            {% else %}
-                                {{ result.player_string }}
-                            {% endif %}
+                            {% include 'common/_player_name.html' %}
                         {% endwith %}
                     {% endif %}
                 </td>
@@ -62,14 +58,10 @@
                 <td>
                     {% if result.player.city %}
                         <a href="{% url 'city_page' result.player.city.slug %}">{{ result.player.city.name }}</a>
+                    {% elif result.player.is_replacement or result.player.is_hide %}
+                        -
                     {% else %}
-                        {% if result.country %}
-                            {{ result.country }}
-                        {% elif result.player.is_replacement or result.player.is_hide %}
-                            -
-                        {% else %}
-                            {{ result.player.country }}
-                        {% endif %}
+                        {{ result.player.country }}
                     {% endif %}
                 </td>
             </tr>

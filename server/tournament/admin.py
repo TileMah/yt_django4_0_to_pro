@@ -169,8 +169,53 @@ class TournamentRoundResultResource(resources.ModelResource):
 
     class Meta:
         model = TournamentRoundResult
-        fields = ('round_number', 'table_number', 'score', 'place', 'player', 'tournament')
+        fields = ('round_number', 'table_number', 'score', 'penalty', 'place', 'player', 'tournament')
         import_id_fields = ('player', 'tournament', 'round_number')
+
+    def before_import(self, dataset, **kwargs):
+        # place is not read from the file — it is computed here, once, for the whole
+        # dataset, by ranking players' raw scores within the same tournament+round+table.
+        self._place_lookup = {}
+        groups = {}
+
+        for row in dataset.dict:
+            first_name = str(row.get('first_name') or '').strip()
+            last_name = str(row.get('last_name') or '').strip()
+            player = Player.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).first()
+            if player is None:
+                continue  # a clear error for this will be raised later, in before_import_row
+
+            tournament_raw = row.get('tournament')
+            tournament_id = int(float(tournament_raw)) if tournament_raw not in (None, '') else 0
+
+            round_raw = row.get('round_number')
+            round_number = int(float(round_raw)) if round_raw not in (None, '') else 0
+
+            table_raw = row.get('table_number')
+            table_number = int(float(table_raw)) if table_raw not in (None, '') else 0
+
+            score_raw = row.get('score')
+            score = int(float(score_raw)) if score_raw not in (None, '') else 0
+
+            key = (tournament_id, round_number, table_number)
+            groups.setdefault(key, []).append((player.id, score))
+
+        invalid_tables = [
+            "tournament={}, round={}, table={}: found {} players (expected 4)".format(
+                key[0], key[1], key[2], len(players)
+            )
+            for key, players in groups.items()
+            if len(players) != 4
+        ]
+        if invalid_tables:
+            raise ValueError(
+                "Some tables do not have exactly 4 players:\n" + "\n".join(invalid_tables)
+            )
+
+        for key, players in groups.items():
+            ranked = sorted(players, key=lambda item: item[1], reverse=True)
+            for index, (player_id, _score) in enumerate(ranked):
+                self._place_lookup[(key[0], key[1], key[2], player_id)] = index + 1
 
     def before_import_row(self, row, **kwargs):
         first_name = str(row.get('first_name') or '').strip()
@@ -197,15 +242,28 @@ class TournamentRoundResultResource(resources.ModelResource):
             raise ValueError("table_number must be greater than 0, got {}".format(table_number))
         row['table_number'] = table_number
 
+        place = self._place_lookup.get((row['tournament'], row['round_number'], row['table_number'], player.id))
+        if place is None or place not in (1, 2, 3, 4):
+            raise ValueError(
+                "Could not determine place for player '{} {}' at tournament={}, round={}, table={} "
+                "(check that the table has between 1 and 4 players)".format(
+                    first_name, last_name, row['tournament'], row['round_number'], row['table_number']
+                )
+            )
+        row['place'] = place
+
+        penalty_raw = row.get('penalty')
+        row['penalty'] = int(float(penalty_raw)) if penalty_raw not in (None, '') else 0
+
         score_raw = row.get('score')
         row['score'] = int(float(score_raw)) if score_raw not in (None, '') else 0
 
 
 class TournamentRoundResultAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     resource_classes = [TournamentRoundResultResource]
-    list_display = ["tournament", "round_number", "table_number", "player", "score", "place"]
+    list_display = ["tournament", "round_number", "table_number", "player", "score", "uma", "penalty", "total", "place"]
     list_display_links = ["tournament"]
-    list_editable = ["round_number", "table_number", "player", "score", "place"]
+    list_editable = ["round_number", "table_number", "player", "score", "penalty", "place"]
     list_filter = [["tournament", admin.RelatedOnlyFieldListFilter], "round_number", "table_number"]
     search_fields = [
         "player__first_name_ru", "player__first_name_en",

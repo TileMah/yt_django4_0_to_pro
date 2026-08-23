@@ -26,6 +26,7 @@ from tournament.models import (
     Tournament,
     TournamentRegistration,
     TournamentResult,
+    TournamentRoundResult,
 )
 from utils.general import split_name
 
@@ -88,6 +89,64 @@ def tournament_details(request, slug):
         .prefetch_related("player")
     )
 
+    round_results = (
+        TournamentRoundResult.objects.filter(tournament=tournament)
+        .select_related("tournament")
+        .order_by("round_number", "table_number", "-score")
+        .prefetch_related("player")
+    )
+
+    rounds = {}
+    for round_result in round_results:
+        rounds.setdefault(round_result.round_number, {}).setdefault(round_result.table_number, []).append(
+            round_result
+        )
+    # convert to a sorted list of (round_number, [(table_number, [results...]), ...])
+    rounds = [
+        (round_number, sorted(tables.items()))
+        for round_number, tables in sorted(rounds.items())
+    ]
+
+    # standings progression: cumulative score + rank after each round, per player
+    player_round_scores = {}
+    players_by_id = {}
+    round_numbers = sorted({r.round_number for r in round_results})
+
+    for r in round_results:
+        player_round_scores.setdefault(r.player_id, {})[r.round_number] = r.total
+        players_by_id[r.player_id] = r.player
+
+    cumulative = {player_id: 0 for player_id in player_round_scores}
+    progression_by_round = {player_id: [] for player_id in player_round_scores}
+
+    for round_number in round_numbers:
+        for player_id in player_round_scores:
+            cumulative[player_id] += player_round_scores[player_id].get(round_number, 0)
+
+        ranked_player_ids = sorted(cumulative, key=lambda pid: cumulative[pid], reverse=True)
+        rank_by_player = {pid: rank + 1 for rank, pid in enumerate(ranked_player_ids)}
+
+        for player_id in player_round_scores:
+            progression_by_round[player_id].append(
+                {
+                    "round_number": round_number,
+                    "cumulative_score": cumulative[player_id],
+                    "rank": rank_by_player[player_id],
+                }
+            )
+
+    standings_progression = sorted(
+        (
+            {
+                "player": players_by_id[player_id],
+                "rounds": progression_by_round[player_id],
+                "final_rank": progression_by_round[player_id][-1]["rank"] if progression_by_round[player_id] else None,
+            }
+            for player_id in player_round_scores
+        ),
+        key=lambda entry: entry["final_rank"] or 999999,
+    )
+
     countries = {}
     for result in results:
         if not result.player:
@@ -112,6 +171,9 @@ def tournament_details(request, slug):
         {
             "tournament": tournament,
             "results": results,
+            "rounds": rounds,
+            "standings_progression": standings_progression,
+            "round_numbers": round_numbers,
             "page": "tournament",
             "countries": countries,
             "has_multiple_countries": has_multiple_countries,

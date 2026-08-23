@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import ujson as json
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.core.validators import MinValueValidator
 
 from club.models import Club
 from mahjong_portal.models import BaseModel
@@ -113,6 +113,11 @@ class Tournament(BaseModel):
     # Sometimes people need to leave notes in registration form
     display_notes = models.BooleanField(default=False)
     # display filled notes in registration table for all in public
+
+    uma_1 = models.IntegerField(default=15000, verbose_name="Ума за 1 место")
+    uma_2 = models.IntegerField(default=5000, verbose_name="Ума за 2 место")
+    uma_3 = models.IntegerField(default=-5000, verbose_name="Ума за 3 место")
+    uma_4 = models.IntegerField(default=-15000, verbose_name="Ума за 4 место")
     share_notes = models.BooleanField(default=False)
 
     old_pantheon_id = models.CharField(max_length=20, null=True, blank=True)
@@ -276,7 +281,7 @@ class TournamentResult(BaseModel):
 
     class Meta:
         unique_together = ("tournament", "player")
-    
+
     def __unicode__(self):
         return self.tournament.name
 
@@ -293,6 +298,41 @@ class TournamentResult(BaseModel):
             return 0
 
         return round(((number_of_players - place) / (number_of_players - 1)) * 1000, 2)
+
+
+class TournamentRoundResult(BaseModel):
+    PLACE_CHOICES = [(1, "1"), (2, "2"), (3, "3"), (4, "4")]
+
+    tournament = models.ForeignKey(Tournament, related_name="round_results", on_delete=models.CASCADE)
+    round_number = models.PositiveSmallIntegerField(verbose_name="Тур")
+    table_number = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name="Стол",
+    )
+    player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="round_results")
+    score = models.IntegerField(verbose_name="Очки (сырой счёт)")
+    penalty = models.IntegerField(default=0, verbose_name="Штраф")
+    place = models.PositiveSmallIntegerField(choices=PLACE_CHOICES, verbose_name="Место в туре")
+
+    class Meta:
+        unique_together = ("tournament", "round_number", "player")
+        ordering = ["tournament", "round_number", "table_number", "-score"]
+
+    @property
+    def uma(self):
+        return {
+            1: self.tournament.uma_1,
+            2: self.tournament.uma_2,
+            3: self.tournament.uma_3,
+            4: self.tournament.uma_4,
+        }[self.place]
+
+    @property
+    def total(self):
+        return self.score + self.uma + self.penalty
+
+    def __str__(self):
+        return "{} — тур {} — стол {} — {}".format(self.tournament, self.round_number, self.table_number, self.player)
 
 
 class TournamentRegistration(BaseModel):
@@ -487,21 +527,3 @@ class TournamentApplication(BaseModel):
 
     def __unicode__(self):
         return ""
-
-class TournamentRoundResult(BaseModel):
-    tournament = models.ForeignKey(Tournament, related_name="round_results", on_delete=models.CASCADE)
-    round_number = models.PositiveSmallIntegerField(verbose_name="Тур")
-    table_number = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1)],
-        verbose_name="Стол",
-    )
-    player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="round_results")
-    score = models.IntegerField(verbose_name="Очки (сырой счёт)")
-    place = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Место в туре")
-
-    class Meta:
-        unique_together = ("tournament", "round_number", "player")
-        ordering = ["tournament", "round_number", "table_number", "-score"]
-
-    def __str__(self):
-        return "{} — тур {} — стол {} — {}".format(self.tournament, self.round_number, self.table_number, self.player)
