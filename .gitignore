@@ -1,4 +1,19 @@
+# Python
 env/
-__pycache__
-server/
-node_modules
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Django build artifacts / local data
+server/collected_static/
+*.sqlite3
+
+# Dumps, archives, secrets
+*.sql
+*.zip
+.env
+
+# Claude Code local settings
+.claude/settings.local.json

@@ -1,0 +1,3 @@
+SELECT player_player.slug, settings_country.code2
+FROM player_player
+JOIN settings_country ON player_player.country_id = settings_country.id
