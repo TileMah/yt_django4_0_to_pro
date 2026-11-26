@@ -52,8 +52,10 @@ def club_page_description(club):
 @register.simple_tag
 def player_page_description(player):
     if player.city:
-        place = "{}, {}".format(genitive(player.city.name).title(), player.country)
-    else:
+        place = "{}, {}".format(genitive(player.city.name).title(), player.country or "")
+    elif player.country:
         place = "{}".format(genitive(player.country.name).title())
+    else:
+        place = ""
 
     return _("Riichi mahjong player %(name)s from %(place)s") % {"name": player.full_name, "place": place}
