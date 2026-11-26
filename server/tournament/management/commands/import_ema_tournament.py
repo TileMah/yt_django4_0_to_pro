@@ -20,6 +20,7 @@
 """
 
 import re
+import sys
 from datetime import date
 
 import requests
@@ -36,7 +37,10 @@ from tournament.models import Tournament, TournamentResult
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MahjongPortalImporter/1.0)"}
 EMA_NUMBER_RE = re.compile(r"/Players/([A-Za-z0-9]+)\.html")
 COUNTRY_CODE_RE = re.compile(r"/Country/([A-Z]{3})_Information\.html")
-DATE_RANGE_RE = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
+# "8-9 Aug 2026", "30 Apr - 2 May 2026", "30 Dec 2025 - 2 Jan 2026"
+DATE_RANGE_RE = re.compile(
+    r"(\d{1,2})\s*([A-Za-z]+)?\s*(\d{4})?\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+)
 DATE_SINGLE_RE = re.compile(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
 MONTHS = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -67,10 +71,14 @@ def parse_ema_number(cell):
         if match:
             value = match.group(1)
             if value.isdigit():
-                return value.lstrip("0") or "0"
+                # "00000000" means "no EMA number". Return "" (not "0") so we never look a
+                # player up by ema_id="0" — many players share it; "0" is written on create.
+                return value.lstrip("0")
             return value
 
     text = clean_text(cell.get_text())
+    if text.isdigit():
+        return text.lstrip("0")
     return text if text and text != "-" else ""
 
 
@@ -92,14 +100,21 @@ def parse_country_code(cell):
 
 
 def parse_date_range(date_text):
-    match = DATE_RANGE_RE.match(date_text)
+    match = DATE_RANGE_RE.search(date_text)
     if match:
-        start_day, end_day, month_name, year = match.groups()
-        month = MONTHS.get(month_name[:3].lower())
-        if month:
-            return date(int(year), month, int(start_day)), date(int(year), month, int(end_day))
+        start_day, start_month_name, start_year, end_day, end_month_name, end_year = match.groups()
+        end_month = MONTHS.get(end_month_name[:3].lower())
+        start_month = MONTHS.get(start_month_name[:3].lower()) if start_month_name else end_month
+        if start_month and end_month:
+            try:
+                return (
+                    date(int(start_year or end_year), start_month, int(start_day)),
+                    date(int(end_year), end_month, int(end_day)),
+                )
+            except ValueError:
+                return None, None
 
-    match = DATE_SINGLE_RE.match(date_text)
+    match = DATE_SINGLE_RE.search(date_text)
     if match:
         day, month_name, year = match.groups()
         month = MONTHS.get(month_name[:3].lower())
@@ -197,6 +212,11 @@ class Command(BaseCommand):
         explicit_tournament_id = options["tournament_id"]
         dry_run = options["dry_run"]
 
+        # a Windows console in cp1251/cp866 can't print names like "Ę" or "ß" —
+        # replace such characters in the output instead of crashing mid-import
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(errors="replace")
+
         self.stdout.write("Скачиваю: {}".format(url))
         response = requests.get(url, headers=HEADERS, timeout=30)
         response.raise_for_status()
@@ -208,7 +228,13 @@ class Command(BaseCommand):
         self.stdout.write("Турнир: {} (ema_id={})".format(tournament_info["name"], tournament_info["number"]))
         self.stdout.write("Найдено строк результатов: {}".format(len(data_rows)))
 
-        country_lookup = {c.code2.upper(): c for c in Country.objects.all() if c.code2}
+        # the page gives either a 2-letter flag code (Country.code2) or a 3-letter
+        # EMA code from the country link (Country.code, e.g. "POR")
+        country_lookup = {}
+        for c in Country.objects.all():
+            for key in (c.code, c.code2):
+                if key:
+                    country_lookup.setdefault(key.upper(), c)
         player_lookup = {name_key(p.first_name, p.last_name): p for p in Player.objects.all()}
 
         # --- турнир: либо явно указанный id, либо поиск/создание по ema_id ---
@@ -276,7 +302,7 @@ class Command(BaseCommand):
 
         # --- результаты и игроки ---
         results_created, results_updated = 0, 0
-        players_created, errors = [], []
+        players_created, ema_ids_filled, errors = [], [], []
 
         with transaction.atomic():
             for cells in data_rows:
@@ -296,6 +322,18 @@ class Command(BaseCommand):
                     player = Player.objects.filter(ema_id=ema_number).first()
                 if player is None:
                     player = player_lookup.get(name_key(first_name, last_name))
+                    # found by name, and the page knows the EMA number we don't have yet
+                    if player is not None and ema_number and player.ema_id in (None, "", "0"):
+                        if dry_run:
+                            self.stdout.write(
+                                "  [dry-run] записал бы ema_id={} игроку {} (id={})".format(
+                                    ema_number, player, player.id
+                                )
+                            )
+                        else:
+                            player.ema_id = ema_number
+                            player.save(update_fields=["ema_id"])
+                            ema_ids_filled.append("{} (id={}) -> {}".format(player, player.id, ema_number))
 
                 if player is None:
                     country = country_lookup.get(country_code.upper()) if country_code else None
@@ -312,7 +350,8 @@ class Command(BaseCommand):
                                 player = Player.objects.create(
                                     first_name=first_name,
                                     last_name=last_name,
-                                    ema_id=ema_number or None,
+                                    # project convention: "0" = player has no EMA number
+                                    ema_id=ema_number or "0",
                                     country=country,
                                 )
                         except IntegrityError as exc:
@@ -360,6 +399,10 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS("Новых игроков создано: {}".format(len(players_created))))
                 for line in players_created:
                     self.stdout.write("  + " + line)
+            if ema_ids_filled:
+                self.stdout.write(self.style.SUCCESS("Игрокам дописан ema_id: {}".format(len(ema_ids_filled))))
+                for line in ema_ids_filled:
+                    self.stdout.write("  ~ " + line)
 
         if errors:
             self.stdout.write(self.style.ERROR("Ошибок: {}".format(len(errors))))
