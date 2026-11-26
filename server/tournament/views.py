@@ -147,6 +147,18 @@ def tournament_details(request, slug):
         key=lambda entry: entry["final_rank"] or 999999,
     )
 
+    # chart data — all players; the chart itself paginates client-side in windows of 16
+    progression_chart_data = {
+        "round_labels": ["R{}".format(round_number) for round_number in round_numbers],
+        "series": [
+            {
+                "name": entry["player"].full_name,
+                "ranks": [round_data["rank"] for round_data in entry["rounds"]],
+            }
+            for entry in standings_progression
+        ],
+    }
+
     countries = {}
     for result in results:
         if not result.player:
@@ -173,6 +185,7 @@ def tournament_details(request, slug):
             "results": results,
             "rounds": rounds,
             "standings_progression": standings_progression,
+            "progression_chart_data": progression_chart_data,
             "round_numbers": round_numbers,
             "page": "tournament",
             "countries": countries,

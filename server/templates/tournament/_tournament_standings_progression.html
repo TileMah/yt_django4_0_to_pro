@@ -1,0 +1,139 @@
+{% load i18n humanize %}
+
+{% if standings_progression %}
+    <h3>{% trans 'Standings progression by round' %}</h3>
+
+    {% if progression_chart_data.series %}
+        <div class="d-flex align-items-center mb-2" style="max-width: 900px;">
+            <button type="button" id="progressionChartPrev" class="btn btn-sm btn-outline-secondary me-2">
+                &laquo; {% trans 'Prev' %}
+            </button>
+            <span id="progressionChartRangeLabel" class="me-2"></span>
+            <button type="button" id="progressionChartNext" class="btn btn-sm btn-outline-secondary">
+                {% trans 'Next' %} &raquo;
+            </button>
+        </div>
+        <div class="mb-4" style="max-width: 900px;">
+            <canvas id="progressionChart" height="400"></canvas>
+        </div>
+        {{ progression_chart_data|json_script:"progression-chart-data" }}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+        <script>
+            (function () {
+                var chartData = JSON.parse(document.getElementById('progression-chart-data').textContent);
+                var palette = [
+                    '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
+                    '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
+                    '#008080', '#e6beff', '#9a6324', '#800000', '#808000', '#000075',
+                ];
+                var pageSize = 16;
+                var totalPages = Math.max(1, Math.ceil(chartData.series.length / pageSize));
+                var currentPage = 0;
+
+                function buildDatasets(page) {
+                    var start = page * pageSize;
+                    var pageSeries = chartData.series.slice(start, start + pageSize);
+                    return pageSeries.map(function (series, index) {
+                        return {
+                            label: series.name,
+                            data: series.ranks,
+                            borderColor: palette[index % palette.length],
+                            backgroundColor: palette[index % palette.length],
+                            spanGaps: true,
+                            tension: 0.15,
+                        };
+                    });
+                }
+
+                var ctx = document.getElementById('progressionChart').getContext('2d');
+                var chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.round_labels,
+                        datasets: buildDatasets(currentPage),
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                reverse: true,
+                                min: 1,
+                                ticks: {stepSize: 1},
+                                title: {display: true, text: "{% trans 'Place' %}"},
+                            },
+                        },
+                        plugins: {
+                            legend: {position: 'right'},
+                        },
+                    },
+                });
+
+                var prevButton = document.getElementById('progressionChartPrev');
+                var nextButton = document.getElementById('progressionChartNext');
+                var rangeLabel = document.getElementById('progressionChartRangeLabel');
+
+                function updateChartPage() {
+                    var start = currentPage * pageSize + 1;
+                    var end = Math.min(start + pageSize - 1, chartData.series.length);
+                    rangeLabel.textContent = start + '-' + end + ' / ' + chartData.series.length;
+
+                    chart.data.datasets = buildDatasets(currentPage);
+                    chart.update();
+
+                    prevButton.disabled = currentPage === 0;
+                    nextButton.disabled = currentPage >= totalPages - 1;
+                }
+
+                prevButton.addEventListener('click', function () {
+                    if (currentPage > 0) {
+                        currentPage -= 1;
+                        updateChartPage();
+                    }
+                });
+                nextButton.addEventListener('click', function () {
+                    if (currentPage < totalPages - 1) {
+                        currentPage += 1;
+                        updateChartPage();
+                    }
+                });
+
+                updateChartPage();
+            })();
+        </script>
+    {% endif %}
+
+    <div class="table-responsive-sm mb-4">
+        <table class="table table-sm table-hover">
+            <thead>
+            <tr>
+                <th scope="col">{% trans 'Name' %}</th>
+                {% for round_number in round_numbers %}
+                    <th scope="col" class="text-center">
+                        {% blocktrans %}R{{ round_number }}{% endblocktrans %}
+                    </th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for entry in standings_progression %}
+                <tr>
+                    <td>
+                        {% with entry.player as player %}
+                            {% include 'common/_player_name.html' %}
+                        {% endwith %}
+                    </td>
+                    {% for round_data in entry.rounds %}
+                        <td class="text-center">
+                            {{ round_data.cumulative_score|intcomma }}
+                            <br>
+                            <span class="badge bg-secondary">#{{ round_data.rank }}</span>
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+

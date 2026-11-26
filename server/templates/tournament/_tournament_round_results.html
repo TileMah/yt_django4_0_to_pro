@@ -1,0 +1,57 @@
+{% load i18n humanize %}
+
+{% if rounds %}
+    <h3>{% trans 'Results by round' %}</h3>
+
+    <div class="accordion" id="roundResultsAccordion">
+        {% for round_number, tables in rounds %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="roundHeading{{ round_number }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#roundCollapse{{ round_number }}" aria-expanded="false"
+                            aria-controls="roundCollapse{{ round_number }}">
+                        {% blocktrans %}Round {{ round_number }}{% endblocktrans %}
+                    </button>
+                </h2>
+                <div id="roundCollapse{{ round_number }}" class="accordion-collapse collapse"
+                     aria-labelledby="roundHeading{{ round_number }}" data-bs-parent="#roundResultsAccordion">
+                    <div class="accordion-body">
+                        {% for table_number, table_results in tables %}
+                            <h5>{% blocktrans %}Table {{ table_number }}{% endblocktrans %}</h5>
+                            <div class="table-responsive-sm mb-3">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">{% trans 'Name' %}</th>
+                                        <th scope="col">{% trans 'Scores' %}</th>
+                                        <th scope="col">{% trans 'Place' %}</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for round_result in table_results %}
+                                        <tr>
+                                            <td>
+                                                {% with round_result.player as player %}
+                                                    {% include 'common/_player_name.html' %}
+                                                {% endwith %}
+                                            </td>
+                                            <td>{{ round_result.score|intcomma }}</td>
+                                            <td>
+                                                {% if round_result.place %}
+                                                    {{ round_result.place }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}

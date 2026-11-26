@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import ujson as json
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -301,7 +301,9 @@ class TournamentResult(BaseModel):
 
 
 class TournamentRoundResult(BaseModel):
-    PLACE_CHOICES = [(1, "1"), (2, "2"), (3, "3"), (4, "4")]
+    PLACE_CHOICES = [
+        (1, "1"), (1.5, "1.5"), (2, "2"), (2.5, "2.5"), (3, "3"), (3.5, "3.5"), (4, "4"),
+    ]
 
     tournament = models.ForeignKey(Tournament, related_name="round_results", on_delete=models.CASCADE)
     round_number = models.PositiveSmallIntegerField(verbose_name="Тур")
@@ -312,7 +314,13 @@ class TournamentRoundResult(BaseModel):
     player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="round_results")
     score = models.IntegerField(verbose_name="Очки (сырой счёт)")
     penalty = models.IntegerField(default=0, verbose_name="Штраф")
-    place = models.PositiveSmallIntegerField(choices=PLACE_CHOICES, verbose_name="Место в туре")
+    place = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        choices=PLACE_CHOICES,
+        validators=[MinValueValidator(1), MaxValueValidator(4)],
+        verbose_name="Место в туре",
+    )
 
     class Meta:
         unique_together = ("tournament", "round_number", "player")
@@ -320,12 +328,27 @@ class TournamentRoundResult(BaseModel):
 
     @property
     def uma(self):
-        return {
-            1: self.tournament.uma_1,
-            2: self.tournament.uma_2,
-            3: self.tournament.uma_3,
-            4: self.tournament.uma_4,
-        }[self.place]
+        uma_values = [self.tournament.uma_1, self.tournament.uma_2, self.tournament.uma_3, self.tournament.uma_4]
+
+        # tie group is derived from matching SCORE (not place) — place can be an ambiguous
+        # average (e.g. a 2-way tie for 2nd-3rd and a 4-way tie both average to 2.5), while
+        # score is what actually determines the tie unambiguously. Count how many players
+        # at this table scored strictly higher (that's how many places this group starts
+        # after), and how many share this exact score (the size of the tie).
+        siblings = TournamentRoundResult.objects.filter(
+            tournament_id=self.tournament_id,
+            round_number=self.round_number,
+            table_number=self.table_number,
+        )
+        higher_count = siblings.filter(score__gt=self.score).count()
+        tie_count = siblings.filter(score=self.score).count()
+        tie_count = max(tie_count, 1)
+
+        start = higher_count + 1  # 1-indexed best place this tie group occupies
+        occupied = uma_values[start - 1: start - 1 + tie_count]
+        if not occupied:
+            return 0
+        return sum(occupied) / len(occupied)
 
     @property
     def total(self):

@@ -1,0 +1,55 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+
+{% block content %}
+    <h1>Reconciliation — {{ tournament }}</h1>
+
+    <p>
+        Checked: <strong>{{ report.checked_count }}</strong>
+        &nbsp;|&nbsp;
+        Mismatches:
+        <strong style="color: {% if report.mismatches_count %}#a94442{% else %}#3c763d{% endif %};">
+            {{ report.mismatches_count }}
+        </strong>
+    </p>
+
+    <table style="border-collapse: collapse; width: 100%; max-width: 800px;">
+        <thead>
+        <tr style="text-align: left; border-bottom: 2px solid #ccc;">
+            <th style="padding: 6px 10px;">Player</th>
+            <th style="padding: 6px 10px;">TournamentResult</th>
+            <th style="padding: 6px 10px;">Sum of rounds</th>
+            <th style="padding: 6px 10px;">Diff</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in report.rows %}
+            <tr style="border-bottom: 1px solid #eee;{% if row.mismatch %} background: #f8d7da;{% endif %}">
+                <td style="padding: 6px 10px;">{{ row.player }}</td>
+                <td style="padding: 6px 10px;">
+                    {% if row.scores is not None %}{{ row.scores|intcomma }}{% else %}—{% endif %}
+                </td>
+                <td style="padding: 6px 10px;">
+                    {% if row.has_round_data %}
+                        {{ row.round_sum|intcomma }}
+                    {% else %}
+                        <em style="color: #856404;">no round data</em>
+                    {% endif %}
+                </td>
+                <td style="padding: 6px 10px;">
+                    {% if row.diff is not None %}{{ row.diff|intcomma }}{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% if report.orphan_rows %}
+        <h2 style="margin-top: 30px;">Players with round data but no TournamentResult row</h2>
+        <ul>
+            {% for row in report.orphan_rows %}
+                <li>{{ row.player }} — round total: {{ row.round_sum|intcomma }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
