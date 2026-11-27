@@ -383,7 +383,11 @@ class Command(BaseCommand):
                         continue
                     if player is None:
                         player = Player.objects.create(
-                            first_name=stub_first, last_name=SUBSTITUTE_LAST_NAME, ema_id="0"
+                            first_name=stub_first,
+                            last_name=SUBSTITUTE_LAST_NAME,
+                            ema_id="0",
+                            is_exclude_from_rating=True,
+                            is_replacement=True,
                         )
                         players_created.append("{} (id={})".format(player, player.id))
                     obj, is_created = TournamentResult.objects.update_or_create(
