@@ -27,6 +27,8 @@ class Player(BaseModel):
     is_exclude_from_rating = models.BooleanField(default=False)
     is_hide_tenhou_activity = models.BooleanField(default=False)
     is_hide_ms_activity = models.BooleanField(default=False)
+    # registered with EMA as "- EMA GUEST -" (organization "EMA Guests", no national association)
+    is_ema_guest = models.BooleanField(default=False, verbose_name="EMA guest")
 
     ema_id = models.CharField(max_length=30, null=True, blank=True, default="")
     pantheon_id = models.PositiveIntegerField(null=True, blank=True, unique=True)

@@ -213,6 +213,12 @@ def parse_tournament_info(soup):
 SUBSTITUTE_LAST_NAME = "SUBSTITUTED"
 
 
+def split_guest_name(full_name):
+    """ "GRANT MAHONEY" -> ("GRANT", "MAHONEY"): first word is the first name."""
+    parts = full_name.split(" ", 1)
+    return (parts[0], parts[1]) if len(parts) == 2 else (full_name, "-")
+
+
 def is_substitute(first_name, last_name):
     """EMA marks substitute seats as e.g. "PLAYER SUBSTITUT", "PLAYER 2 SUBSTITUT",
     "SUBSTITUTED PLAYER", or leaves both names as "-"."""
@@ -363,6 +369,11 @@ class Command(BaseCommand):
                 ema_number = parse_ema_number(cells[1])
                 last_name = clean_text(cells[2].get_text())
                 first_name = clean_text(cells[3].get_text())
+                # EMA guests come as first name "- EMA GUEST -" and the full name in the last
+                # name column ("GRANT MAHONEY"); their EMA number (24xxxxxx) is real
+                is_guest = "EMA GUEST" in first_name.upper()
+                if is_guest:
+                    first_name, last_name = split_guest_name(last_name)
                 country_code = parse_country_code(cells[4])
                 scores = parse_number(cells[6].get_text())
                 ranking = parse_number(cells[7].get_text())
@@ -419,6 +430,10 @@ class Command(BaseCommand):
                             player.save(update_fields=["ema_id"])
                             ema_ids_filled.append("{} (id={}) -> {}".format(player, player.id, ema_number))
 
+                if player is not None and is_guest and not player.is_ema_guest and not dry_run:
+                    player.is_ema_guest = True
+                    player.save(update_fields=["is_ema_guest"])
+
                 # existing player without a country: take it from the page
                 if player is not None and player.country_id is None and country_code and not dry_run:
                     page_country = country_lookup.get(country_code.upper())
@@ -445,6 +460,7 @@ class Command(BaseCommand):
                                     # project convention: "0" = player has no EMA number
                                     ema_id=ema_number or "0",
                                     country=country,
+                                    is_ema_guest=is_guest,
                                 )
                         except IntegrityError as exc:
                             errors.append(

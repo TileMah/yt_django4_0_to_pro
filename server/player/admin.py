@@ -83,7 +83,7 @@ class PlayerAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     confirm_form_class = PlayerConfirmImportForm
 
     list_display = ["ema_id", "first_name","last_name", "city", "pantheon_id"]
-    list_filter = ["is_hide", "country"]
+    list_filter = ["is_hide", "is_ema_guest", "country"]
     search_fields = ["first_name_ru", "first_name_en", "last_name_ru", "last_name_en", "ema_id"]
     
     def get_import_formats(self):
