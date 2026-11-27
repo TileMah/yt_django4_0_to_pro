@@ -210,6 +210,18 @@ def parse_tournament_info(soup):
     return info
 
 
+SUBSTITUTE_LAST_NAME = "SUBSTITUTED"
+
+
+def is_substitute(first_name, last_name):
+    """EMA marks substitute seats as e.g. "PLAYER SUBSTITUT", "PLAYER 2 SUBSTITUT",
+    "SUBSTITUTED PLAYER", or leaves both names as "-"."""
+    full = "{} {}".format(first_name, last_name).upper()
+    if "SUBSTITU" in full:
+        return True
+    return first_name.strip() in ("", "-") and last_name.strip() in ("", "-")
+
+
 def generate_unique_slug(name):
     base_slug = slugify(name)
     slug = base_slug
@@ -340,6 +352,7 @@ class Command(BaseCommand):
         # --- результаты и игроки ---
         results_created, results_updated = 0, 0
         players_created, ema_ids_filled, countries_filled, errors = [], [], [], []
+        substitutes_seen = 0
 
         with transaction.atomic():
             for cells in data_rows:
@@ -353,6 +366,36 @@ class Command(BaseCommand):
                 country_code = parse_country_code(cells[4])
                 scores = parse_number(cells[6].get_text())
                 ranking = parse_number(cells[7].get_text())
+
+                # substitute seats ("PLAYER SUBSTITUT", "PLAYER 2 SUBSTITUT", "- -", ...) all go to
+                # the shared stubs "PLAYER 1..N SUBSTITUTED": the k-th substitute row on the page
+                # (rows are in place order) -> PLAYER k, so re-imports stay stable
+                if is_substitute(first_name, last_name):
+                    substitutes_seen += 1
+                    stub_first = "PLAYER {}".format(substitutes_seen)
+                    player = Player.objects.filter(first_name=stub_first, last_name=SUBSTITUTE_LAST_NAME).first()
+                    if dry_run:
+                        self.stdout.write(
+                            "  [dry-run] place={} {} {} -> {} {} scores={} ranking={}".format(
+                                place, first_name, last_name, stub_first, SUBSTITUTE_LAST_NAME, scores, ranking
+                            )
+                        )
+                        continue
+                    if player is None:
+                        player = Player.objects.create(
+                            first_name=stub_first, last_name=SUBSTITUTE_LAST_NAME, ema_id="0"
+                        )
+                        players_created.append("{} (id={})".format(player, player.id))
+                    obj, is_created = TournamentResult.objects.update_or_create(
+                        tournament=tournament,
+                        player=player,
+                        defaults={"place": place, "scores": scores, "ranking": ranking},
+                    )
+                    if is_created:
+                        results_created += 1
+                    else:
+                        results_updated += 1
+                    continue
 
                 player = None
                 if ema_number and ema_number.isdigit():
