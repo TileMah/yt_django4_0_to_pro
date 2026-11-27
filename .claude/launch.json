@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "django",
+      "runtimeExecutable": "C:\\Cloud.DataOld\\Soft\\Django-Python-Postgres\\MAHP\\env\\Scripts\\python.exe",
+      "runtimeArgs": ["server\\manage.py", "runserver", "127.0.0.1:8000"],
+      "port": 8000,
+      "env": { "NO_COLOR": "1", "PYTHONIOENCODING": "utf-8" }
+    }
+  ]
+}

@@ -17,3 +17,7 @@ server/collected_static/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Database backups
+backups/
+*.dump

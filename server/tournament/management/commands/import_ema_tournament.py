@@ -37,15 +37,24 @@ from tournament.models import Tournament, TournamentResult
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MahjongPortalImporter/1.0)"}
 EMA_NUMBER_RE = re.compile(r"/Players/([A-Za-z0-9]+)\.html")
 COUNTRY_CODE_RE = re.compile(r"/Country/([A-Z]{3})_Information\.html")
-# "8-9 Aug 2026", "30 Apr - 2 May 2026", "30 Dec 2025 - 2 Jan 2026"
-DATE_RANGE_RE = re.compile(
-    r"(\d{1,2})\s*([A-Za-z]+)?\s*(\d{4})?\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
-)
-DATE_SINGLE_RE = re.compile(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
-MONTHS = {
-    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-}
+COUNTRY_ALIASES = {"GB": "UK", "UK": "GB"}
+DATE_TOKEN_RE =re.compile(r"\d+|[^\W\d_]+")
+# English, French and German spellings seen on mahjong-europe.org ("Aug.", "mars", "Okt")
+MONTH_PREFIXES = [
+    ("juin", 6), ("juni", 6), ("juil", 7), ("juli", 7),
+    ("jan", 1), ("feb", 2), ("fév", 2), ("fev", 2), ("mar", 3), ("mär", 3), ("mrz", 3),
+    ("apr", 4), ("avr", 4), ("may", 5), ("mai", 5), ("jun", 6), ("jul", 7),
+    ("aug", 8), ("aoû", 8), ("aou", 8), ("sep", 9), ("oct", 10), ("okt", 10),
+    ("nov", 11), ("dec", 12), ("déc", 12), ("dez", 12),
+]
+
+
+def month_number(word):
+    word = word.lower()
+    for prefix, number in MONTH_PREFIXES:
+        if word.startswith(prefix):
+            return number
+    return None
 
 
 def clean_text(value):
@@ -100,29 +109,53 @@ def parse_country_code(cell):
 
 
 def parse_date_range(date_text):
-    match = DATE_RANGE_RE.search(date_text)
-    if match:
-        start_day, start_month_name, start_year, end_day, end_month_name, end_year = match.groups()
-        end_month = MONTHS.get(end_month_name[:3].lower())
-        start_month = MONTHS.get(start_month_name[:3].lower()) if start_month_name else end_month
-        if start_month and end_month:
-            try:
-                return (
-                    date(int(start_year or end_year), start_month, int(start_day)),
-                    date(int(end_year), end_month, int(end_day)),
-                )
-            except ValueError:
-                return None, None
+    """
+    EMA pages use many free-form date spellings, e.g.
+    "15 Aug. 2008", "5-6 Sep. 2015", "2-3. May 2015", "13-14 Apr.2019", "9 Feb. 25",
+    "May 23-24 2026", "Jan 31–Feb 1 2026", "31-01 Oct-Nov 2026", "17-mars-13",
+    "06/06/2026", "30 Dec 2025 - 2 Jan 2026".
+    So instead of matching one pattern, split the text into numbers and month words.
+    Returns (start_date, end_date) or (None, None).
+    """
+    tokens = DATE_TOKEN_RE.findall(date_text or "")
+    months = [m for m in (month_number(t) for t in tokens if not t.isdigit()) if m]
+    numbers = [t for t in tokens if t.isdigit()]
 
-    match = DATE_SINGLE_RE.search(date_text)
-    if match:
-        day, month_name, year = match.groups()
-        month = MONTHS.get(month_name[:3].lower())
-        if month:
-            single_date = date(int(year), month, int(day))
-            return single_date, single_date
+    years = [int(n) for n in numbers if len(n) == 4]
+    if years:
+        days = [int(n) for n in numbers if len(n) <= 2]
+    elif len(numbers) >= 2 and len(numbers[-1]) == 2:
+        # two-digit year at the end: "9 Feb. 25", "17-mars-13"
+        years = [2000 + int(numbers[-1])]
+        days = [int(n) for n in numbers[:-1] if len(n) <= 2]
+    else:
+        return None, None
 
-    return None, None
+    if not months:
+        # numeric "dd/mm/yyyy"
+        if len(days) == 2:
+            days, months = [days[0]], [days[1]]
+        else:
+            return None, None
+
+    if not days:
+        return None, None
+
+    start_day, end_day = days[0], days[-1]
+    start_month, end_month = months[0], months[-1]
+    start_year, end_year = years[0], years[-1]
+    try:
+        start, end = date(start_year, start_month, start_day), date(end_year, end_month, end_day)
+    except ValueError:
+        return None, None
+
+    if start > end and start_year == end_year:
+        # "30 Dec - 2 Jan 2026": the year is only given once, for the end date
+        try:
+            start = date(start_year - 1, start_month, start_day)
+        except ValueError:
+            return None, None
+    return start, end
 
 
 def find_result_rows(soup):
@@ -235,6 +268,10 @@ class Command(BaseCommand):
             for key in (c.code, c.code2):
                 if key:
                     country_lookup.setdefault(key.upper(), c)
+        # EMA uses the ISO flag "GB", while this database stores United Kingdom as code2="UK"
+        for alias, real in COUNTRY_ALIASES.items():
+            if alias not in country_lookup and real in country_lookup:
+                country_lookup[alias] = country_lookup[real]
         player_lookup = {name_key(p.first_name, p.last_name): p for p in Player.objects.all()}
 
         # --- турнир: либо явно указанный id, либо поиск/создание по ema_id ---
@@ -302,7 +339,7 @@ class Command(BaseCommand):
 
         # --- результаты и игроки ---
         results_created, results_updated = 0, 0
-        players_created, ema_ids_filled, errors = [], [], []
+        players_created, ema_ids_filled, countries_filled, errors = [], [], [], []
 
         with transaction.atomic():
             for cells in data_rows:
@@ -334,6 +371,14 @@ class Command(BaseCommand):
                             player.ema_id = ema_number
                             player.save(update_fields=["ema_id"])
                             ema_ids_filled.append("{} (id={}) -> {}".format(player, player.id, ema_number))
+
+                # existing player without a country: take it from the page
+                if player is not None and player.country_id is None and country_code and not dry_run:
+                    page_country = country_lookup.get(country_code.upper())
+                    if page_country is not None:
+                        player.country = page_country
+                        player.save(update_fields=["country"])
+                        countries_filled.append("{} (id={}) -> {}".format(player, player.id, page_country.code2))
 
                 if player is None:
                     country = country_lookup.get(country_code.upper()) if country_code else None
@@ -403,6 +448,10 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS("Игрокам дописан ema_id: {}".format(len(ema_ids_filled))))
                 for line in ema_ids_filled:
                     self.stdout.write("  ~ " + line)
+            if countries_filled:
+                self.stdout.write(self.style.SUCCESS("Игрокам дописана страна: {}".format(len(countries_filled))))
+                for line in countries_filled:
+                    self.stdout.write("  ^ " + line)
 
         if errors:
             self.stdout.write(self.style.ERROR("Ошибок: {}".format(len(errors))))
