@@ -213,9 +213,18 @@ def parse_tournament_info(soup):
 SUBSTITUTE_LAST_NAME = "SUBSTITUTED"
 
 
-def split_guest_name(full_name):
-    """ "GRANT MAHONEY" -> ("GRANT", "MAHONEY"): first word is the first name."""
-    parts = full_name.split(" ", 1)
+def split_full_name(full_name):
+    """Split a full name written in one field into (first_name, last_name).
+
+    "GRANT MAHONEY" -> ("GRANT", "MAHONEY"): first word is the first name;
+    "HUANG, HAOCHENG" -> ("HAOCHENG", "HUANG"): "LAST, FIRST" form.
+    A single word can't be split: (full_name, "-").
+    """
+    if "," in full_name:
+        last, first = [part.strip() for part in full_name.split(",", 1)]
+        if first and last:
+            return first, last
+    parts = full_name.replace(",", " ").split(None, 1)
     return (parts[0], parts[1]) if len(parts) == 2 else (full_name, "-")
 
 
@@ -382,7 +391,13 @@ class Command(BaseCommand):
                 # name column ("GRANT MAHONEY"); their EMA number (24xxxxxx) is real
                 is_guest = "EMA GUEST" in first_name.upper()
                 if is_guest:
-                    first_name, last_name = split_guest_name(last_name)
+                    first_name, last_name = split_full_name(last_name)
+                # some pages have the whole name in one column and "-" or nothing in the other
+                # ("MASAHIKO TAKAHASHI" / "-"): split it like a guest name
+                elif last_name in ("", "-") and " " in first_name.strip(" ,"):
+                    first_name, last_name = split_full_name(first_name)
+                elif first_name in ("", "-") and " " in last_name.strip(" ,"):
+                    first_name, last_name = split_full_name(last_name)
                 country_code = parse_country_code(cells[4])
                 scores = parse_number(cells[6].get_text())
                 ranking = parse_number(cells[7].get_text())
