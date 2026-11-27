@@ -31,6 +31,8 @@ import unicodedata
 def normalize_name(value):
     value = str(value or '').strip().upper()
     value = value.replace('-', ' ')
+    # Dutch "LAST, VAN" form: "MEER, VAN DER" must match "VAN DER MEER"
+    value = value.replace(',', ' ')
     value = unicodedata.normalize('NFKD', value)
     value = ''.join(c for c in value if not unicodedata.combining(c))
     value = ' '.join(value.split())  # collapse repeated/leading/trailing whitespace
