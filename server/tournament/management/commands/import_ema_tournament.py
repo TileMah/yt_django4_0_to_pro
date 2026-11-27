@@ -354,6 +354,15 @@ class Command(BaseCommand):
                     raise CommandError("Не удалось создать турнир: {}".format(exc))
         else:
             self.stdout.write("Турнир уже есть в базе: {} (id={})".format(tournament, tournament.id))
+            # турнир заведён вручную до импорта: число игроков не заполнено — берём со страницы EMA
+            page_players = parse_number(tournament_info["players"]) or 0
+            if not tournament.number_of_players and page_players:
+                if dry_run:
+                    self.stdout.write("  [dry-run] записал бы число игроков: {}".format(page_players))
+                else:
+                    tournament.number_of_players = page_players
+                    tournament.save(update_fields=["number_of_players"])
+                    self.stdout.write("  Число игроков: 0 -> {}".format(page_players))
 
         # --- результаты и игроки ---
         results_created, results_updated = 0, 0
